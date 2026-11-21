@@ -1,6 +1,13 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Longview</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#ECEFF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1015" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Longview">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
 <style>
@@ -67,7 +74,8 @@ button { cursor: pointer; }
 main { padding-block: 28px 64px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
 
 .panel { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
-.panel > h3 + * { margin-top: 12px; }
+.panel > h3 + *, .panel > .row + * { margin-top: 12px; }
+a { color: var(--accent); }
 .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .head p { color: var(--ink2); max-width: 62ch; margin-top: 6px; }
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
@@ -167,6 +175,54 @@ details.why[open] summary::after { content: "–"; }
   .score { font-size: 4rem; }
   h2 { font-size: 1.35rem; }
 }
+
+/* ---------- mobile fixes ---------- */
+body { overflow-x: clip; }
+.tablewrap { -webkit-overflow-scrolling: touch; }
+@media (max-width: 899px) {
+  html { -webkit-text-size-adjust: 100%; }
+  .shell { padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); }
+  .side { padding-block: 14px 0; gap: 4px; }
+  .brand { flex-direction: row; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .brand b { font-size: 1.3rem; }
+  .brand span { font-size: 0.75rem; }
+  /* bottom tab bar: thumb reachable, scrolls sideways for the 13 sections */
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; flex-direction: row; gap: 2px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    background: var(--raised); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); box-shadow: 0 -4px 14px rgba(0,0,0,.06); }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a { flex: none; min-height: 44px; display: flex; align-items: center; padding: 0 14px; white-space: nowrap; font-size: 0.92rem; }
+  main { padding-block: 14px calc(88px + env(safe-area-inset-bottom, 0px)); gap: 16px; }
+  .panel { padding: 14px; border-radius: 10px; }
+  .head { align-items: flex-start; }
+  /* iOS zooms into any field under 16px */
+  input[type=text], input[type=number], input[type=time], input[type=date], select, textarea { font-size: 16px; min-height: 44px; }
+  textarea { min-height: 140px; }
+  .btn { min-height: 44px; padding: 9px 16px; }
+  .btn.ghost { padding: 9px 12px; }
+  .row > .btn { flex: 0 1 auto; }
+  /* 22px checkbox, 44px hit area */
+  .chk { position: relative; }
+  .chk::before { content: ""; position: absolute; inset: -11px; }
+  .item { gap: 12px; padding: 12px 0; flex-wrap: wrap; }
+  .item .grow { flex: 1 1 140px; }
+  .scale { flex-wrap: wrap; }
+  .scale button { width: 44px; height: 44px; }
+  .form { grid-template-columns: minmax(0, 1fr); }
+  label.field[style*="width"] { width: 100% !important; max-width: 100%; }
+  .tablewrap table { min-width: 560px; }
+  .score { font-size: 3.6rem; }
+  .quote { font-size: 1.2rem; }
+  .brain { grid-template-columns: minmax(0, 1fr); }
+  .bubble { max-width: 94%; }
+  .chart text { font-size: 17px; }
+  .banner { padding: 12px; }
+  details.why summary { min-height: 44px; }
+}
+@media (max-width: 400px) {
+  .pillars { grid-template-columns: minmax(0, 1fr); }
+  h2 { font-size: 1.25rem; }
+  .nav a { padding: 0 11px; }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -175,6 +231,8 @@ details.why[open] summary::after { content: "–"; }
     <div class="brand"><b>Longview</b><span>Plan for the person you become</span></div>
     <nav class="nav" id="nav" aria-label="Sections"></nav>
     <div class="status" id="status" role="status"></div>
+    <button class="btn" id="installBtn" hidden>Install app</button>
+    <div class="muted small" id="iosHint" hidden>To install on iPhone: tap Share, then Add to Home Screen. <a href="#" id="iosHide">Hide</a></div>
   </aside>
   <main id="main"></main>
 </div>
@@ -273,27 +331,37 @@ async function flush() {
   if (!docRef) { setStatus("Saved in this browser"); return; }
   if (saving) { pending = true; return; }
   saving = true;
-  try { await docRef.set({ state: JSON.stringify(S), updated: S.updated }); setStatus("Saved to your account"); }
-  catch (e) { setStatus(e && e.code === "quota_exceeded" ? "Storage is full. Export your data from Me." : "Saved in this browser only"); }
+  try { await docRef.set({ state: JSON.stringify(S), updated: S.updated }); setStatus("Saved online"); }
+  catch (e) { setStatus(e && e.code === "quota_exceeded" ? "Could not save online. Export your data from Me." : "Saved in this browser only"); }
   saving = false;
   if (pending) { pending = false; flush(); }
 }
 async function connectStore() {
   try {
-    const c = window.claude; if (!c) { setStatus("Saved in this browser"); return; }
-    const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
-    if (!db || !user) { setStatus("Saved in this browser"); return; }
-    const id = await user.id();
-    if (!id) { setStatus("Saved in this browser"); return; }
-    docRef = db.doc("data/users/" + id + "/main");
-    const snap = await docRef.get();
-    if (snap.exists) {
-      const remote = JSON.parse(snap.data().state);
-      if ((remote.updated || 0) >= (S.updated || 0)) { S = remote; lsSet(); render(); }
+    if (LOCAL) { setStatus("Local file: saved in this browser only"); return; }
+    if (!appKey()) { setStatus("Saved in this browser"); return; }
+    const api = {
+      async get() {
+        const r = await fetch("/api/state", { headers: apiHeaders() });
+        if (r.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
+        if (!r.ok) throw { code: "server" };
+        return r.json();
+      },
+      async set(o) {
+        const r = await fetch("/api/state", { method: "PUT", headers: apiHeaders({ "content-type": "application/json" }), body: JSON.stringify(o) });
+        if (r.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
+        if (!r.ok) throw { code: "server" };
+      }
+    };
+    const remote = await api.get();
+    docRef = api;
+    if (remote.state) {
+      const r = JSON.parse(remote.state);
+      if ((r.updated || 0) >= (S.updated || 0)) { S = r; S.rdone = S.rdone || {}; lsSet(); render(); }
       else flush();
     } else flush();
-    setStatus("Saved to your account");
-  } catch (e) { setStatus("Saved in this browser"); }
+    setStatus("Saved online");
+  } catch (e) { setStatus(e && e.code === "unauthorized" ? "Wrong access key. Reload to retry" : "Saved in this browser only"); }
 }
 
 /* ---------- scoring ---------- */
@@ -408,12 +476,54 @@ function moves() {
 }
 
 /* ---------- AI ---------- */
-let sampleFn;
-async function getSample() { if (sampleFn !== undefined) return sampleFn; try { sampleFn = (window.claude && await window.claude.use("sample")) || null; } catch (e) { sampleFn = null; } return sampleFn; }
-async function askText(prompt, opts) { const s = await getSample(); if (!s) throw { code: "none" }; return s(prompt, opts); }
-async function askJson(prompt, opts) { const s = await getSample(); if (!s || !s.json) throw { code: "none" }; return s.json(prompt, opts); }
+const KEY_LS = "longview.key";
+const LOCAL = location.protocol === "file:";
+function appKey(force) {
+  if (LOCAL) return "";
+  let k = ""; try { k = localStorage.getItem(KEY_LS) || ""; } catch (e) { }
+  if (!k || force) { k = (window.prompt("Access key") || "").trim(); try { if (k) localStorage.setItem(KEY_LS, k); } catch (e) { } }
+  return k;
+}
+function apiHeaders(extra) { return Object.assign({ "x-app-key": appKey() }, extra || {}); }
+function toMessages(prompt) {
+  const src = typeof prompt === "string" ? [{ role: "user", content: prompt }] : prompt;
+  const out = [];
+  src.forEach(m => { const last = out[out.length - 1]; if (last && last.role === m.role) last.content += "\n\n" + m.content; else out.push({ role: m.role, content: m.content }); });
+  return out;
+}
+async function callAI(prompt, opts, stream) {
+  opts = opts || {};
+  if (LOCAL) throw { code: "local" };
+  if (!appKey()) throw { code: "unauthorized" };
+  let res;
+  try { res = await fetch("/api/ai", { method: "POST", headers: apiHeaders({ "content-type": "application/json" }), body: JSON.stringify({ messages: toMessages(prompt), stream: !!stream }), signal: opts.signal }); }
+  catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+  if (!res.ok) {
+    let j = {}; try { j = await res.json(); } catch (e) { }
+    if (res.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
+    throw { code: res.status === 429 ? "rate_limited" : (j.code || "server") };
+  }
+  if (!stream) return (await res.json()).text || "";
+  const reader = res.body.getReader(), dec = new TextDecoder(); let acc = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      acc += dec.decode(value, { stream: true });
+      if (opts.onText) opts.onText({ text: acc });
+    }
+  } catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network", text: acc }; }
+  return acc;
+}
+async function askText(prompt, opts) { const text = await callAI(prompt, opts, !!(opts && opts.onText)); return { text }; }
+async function askJson(prompt, opts) {
+  const raw = await callAI(prompt, opts, false);
+  const t = raw.replace(/```json|```/g, "").trim();
+  const i = Math.min(...["[", "{"].map(c => { const x = t.indexOf(c); return x < 0 ? Infinity : x; }));
+  const j = Math.max(t.lastIndexOf("]"), t.lastIndexOf("}"));
+  try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { throw { code: "invalid_json" }; }
+}
 function errText(e) {
-  const m = { none: "AI is not available in this view. Open the page from claude.ai to use it.", not_granted: "AI access was declined for this page. Reload to be asked again.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped.", sampling_disabled: "AI is turned off for this account." };
+  const m = { local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The server is missing its AI key. Check the Vercel environment variables.", network: "Could not reach the server. Check your connection and try again.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped." };
   return m[e && e.code] || "Something interrupted the request. Try again.";
 }
 function ctx() {
@@ -459,7 +569,7 @@ views.today = () => {
     '<div><div class="label" style="margin-bottom:6px">Energy</div><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ciSet" data-f="energy" data-v="' + n + '" aria-pressed="' + (c.energy === n) + '" aria-label="Energy ' + n + '">' + n + "</button>").join("") + '</div></div>' +
     '<div><div class="label" style="margin-bottom:6px">Mood</div><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ciSet" data-f="mood" data-v="' + n + '" aria-pressed="' + (c.mood === n) + '" aria-label="Mood ' + n + '">' + n + "</button>").join("") + '</div></div></section>' +
     '<section class="panel"><h3>Habits today</h3>' + (S.habits.length ? S.habits.map(h => { const on = !!todayLog()[h.id]; return '<div class="item' + (on ? " done" : "") + '">' + chk(on, "toggleHabit", h.id, h.name) + '<div class="grow">' + esc(h.name) + '</div><span class="chip ' + (h.kind === "avoid" ? "warn" : "acc") + '">' + (h.kind === "avoid" ? "avoid" : "build") + '</span><span class="mono small muted" title="Current streak">' + streak(S.hlog, h.id) + "d</span></div>"; }).join("") : '<p class="muted">No habits yet. Add some in Habits.</p>') + "</section></div>" +
-    '<div class="grid2"><section class="panel"><h3>Routine today</h3>' + (S.routine.length ? [...S.routine].sort((a, b) => a.time.localeCompare(b.time)).map(r => { const on = !!todayR()[r.id]; return '<div class="item' + (on ? " done" : "") + (nextR && nextR.id === r.id ? " now" : "") + '">' + chk(on, "toggleRoutine", r.id, r.label) + '<span class="time">' + esc(r.time) + '</span><div class="grow">' + esc(r.label) + "</div>" + (nextR && nextR.id === r.id ? '<span class="chip acc">next</span>' : "") + "</div>"; }).join("") : '<p class="muted">No routine yet. Let Longview build one in Routine.</p>') + "</section>" +
+    '<div class="grid2"><section class="panel"><div class="row between"><h3>Routine today</h3><a class="small" href="#routine">Edit routine</a></div>' + (S.routine.length ? [...S.routine].sort((a, b) => a.time.localeCompare(b.time)).map(r => { const on = !!todayR()[r.id]; return '<div class="item' + (on ? " done" : "") + (nextR && nextR.id === r.id ? " now" : "") + '">' + chk(on, "toggleRoutine", r.id, r.label) + '<span class="time">' + esc(r.time) + '</span><div class="grow">' + esc(r.label) + "</div>" + (nextR && nextR.id === r.id ? '<span class="chip acc">next</span>' : "") + "</div>"; }).join("") : '<p class="muted">No routine yet. <a href="#routine">Build one in Routine</a>.</p>') + "</section>" +
     '<section class="panel stack"><h3>Next moves</h3>' + moves().map(m => '<div><b>' + esc(m[0]) + '</b><p class="muted">' + esc(m[1]) + "</p></div>").join("") +
     (pj ? '<div><div class="label" style="margin:6px 0">If the next 90 days look like your last ' + P.days.length + '</div>' + pj.map(r => '<div class="row between small" style="padding:3px 0"><span>' + r[0] + '</span><span class="mono">' + (r[1] == null ? "–" : r[1]) + ' <span class="muted">' + r[2] + "</span></span></div>").join("") + "</div>" : "") + "</section></div>" +
     '<section class="panel stack"><h3>Ask the strategist</h3><p class="muted small">Claude reads your last 14 days and tells you where this is heading and what to change. It uses your own usage.</p><div class="row"><button class="btn primary" data-act="readOutlook"' + (ai.outlookBusy ? " disabled" : "") + ">" + (ai.outlookBusy ? "Reading..." : "Read my outlook") + '</button>' + (ai.outlookBusy ? '<button class="btn" data-act="stop">Stop</button>' : "") + '</div><div class="out" id="outlookOut">' + esc(ai.outlook || "") + "</div></section>";
@@ -488,7 +598,7 @@ views.routine = () => {
   return demoBanner() + '<div class="head"><div><h2>Routine</h2><p>A routine is a bet that tomorrow you will not have to decide. Keep it short enough to hit nine days in ten.</p></div>' + (P ? '<div><div class="label">Kept, last 14 days</div><b class="mono" style="font-size:1.6rem">' + (P.p.routine == null ? "–" : Math.round(P.p.routine) + "%") + "</b></div>" : "") + "</div>" +
     '<section class="panel stack"><h3>Build me a routine</h3><p class="muted small">Tell Longview your constraints. It drafts a day you can preview before it replaces anything.</p><div class="form"><label class="field">Wake<input type="time" id="rwake" data-draft="rwake" value="' + esc(D.rwake || S.profile.wake) + '"></label><label class="field">Bed<input type="time" id="rbed" data-draft="rbed" value="' + esc(D.rbed || S.profile.sleep) + '"></label></div><label class="field">Fixed commitments, energy pattern, what you want from the day<textarea id="rnotes" data-draft="rnotes" style="min-height:84px" placeholder="e.g. Work 10:00 to 18:00 on weekdays. Best focus before noon. I want to study two hours a day and stop scrolling at night.">' + esc(D.rnotes || "") + '</textarea></label><div class="row"><button class="btn primary" data-act="genRoutine"' + (ai.routineBusy ? " disabled" : "") + ">" + (ai.routineBusy ? "Drafting..." : "Draft my routine") + "</button></div>" + (ai.routineErr ? '<p class="small" style="color:var(--bad)">' + esc(ai.routineErr) + "</p>" : "") +
     (ai.routine ? '<div class="ai"><div class="label">Draft</div>' + ai.routine.map(r => '<div class="row small"><span class="time">' + esc(r.time) + "</span><span>" + esc(r.label) + '</span><span class="chip">' + esc(CATS[r.cat] || r.cat) + "</span></div>").join("") + '<div class="row"><button class="btn primary" data-act="applyRoutine" data-mode="replace">Replace my routine</button><button class="btn" data-act="applyRoutine" data-mode="add">Add to my routine</button></div></div>' : "") + "</section>" +
-    '<section class="panel"><h3>Your routine</h3>' + (sorted.length ? sorted.map(r => '<div class="item"><span class="time">' + esc(r.time) + '</span><div class="grow">' + esc(r.label) + '</div><span class="chip">' + esc(CATS[r.cat] || r.cat) + '</span><button class="btn ghost danger" data-act="delRoutine" data-id="' + r.id + '" aria-label="Remove ' + esc(r.label) + '">Remove</button></div>').join("") : '<p class="muted">Empty. Draft one above or add blocks below.</p>') + "</section>" +
+    '<section class="panel"><h3>Your routine</h3><p class="muted small" style="margin-bottom:6px">Ticks here are today\'s ticks, the same as on Today.</p>' + (sorted.length ? sorted.map(r => { const on = !!todayR()[r.id]; return '<div class="item' + (on ? ' done' : '') + '">' + chk(on, "toggleRoutine", r.id, r.label) + '<span class="time">' + esc(r.time) + '</span><div class="grow">' + esc(r.label) + '</div><span class="chip">' + esc(CATS[r.cat] || r.cat) + '</span><button class="btn ghost danger" data-act="delRoutine" data-id="' + r.id + '" aria-label="Remove ' + esc(r.label) + '">Remove</button></div>'; }).join("") : '<p class="muted">Empty. Draft one above or add blocks below.</p>') + "</section>" +
     '<section class="panel"><h3>Add a block</h3><form data-form="addRoutine" class="form"><label class="field">Time<input type="time" id="rtime" required></label><label class="field">What<input type="text" id="rlabel" placeholder="e.g. Read, no phone" required></label><label class="field">Area<select id="rcat">' + Object.entries(CATS).map(([k, v]) => '<option value="' + k + '">' + v + "</option>").join("") + '</select></label><button class="btn primary" type="submit">Add</button></form></section>' +
     '<section class="panel stack"><h3>Reminders</h3><p class="muted small">Reminders appear at the top of this page while it is open. They cannot buzz your phone when the page is closed.</p>' + (S.reminders.length ? [...S.reminders].sort((a, b) => a.time.localeCompare(b.time)).map(m => '<div class="item"><span class="time">' + esc(m.time) + '</span><div class="grow">' + esc(m.text) + '</div><button class="btn ghost danger" data-act="delReminder" data-id="' + m.id + '">Remove</button></div>').join("") : '<p class="muted">No reminders.</p>') + '<form data-form="addReminder" class="form"><label class="field">Time<input type="time" id="mtime" required></label><label class="field">Reminder<input type="text" id="mtext" required placeholder="e.g. Message Mentor"></label><button class="btn primary" type="submit">Add</button></form></section>';
 };
@@ -867,7 +977,7 @@ views.me = () => {
     '<label class="field">Goals for the next year<textarea data-set="profile.goals" style="min-height:84px" placeholder="e.g. Ship a product, run a half marathon, keep two close friendships.">' + esc(p.goals) + '</textarea></label>' +
     '<label class="field">Strengths to build on<textarea data-set="profile.strengths" style="min-height:84px" placeholder="e.g. Long-range planning, independent execution, learning fast.">' + esc(p.strengths) + '</textarea></label>' +
     '<label class="field">Weaknesses to work on<textarea data-set="profile.weaknesses" style="min-height:84px" placeholder="e.g. Skipping relationships, over-working, ignoring sleep.">' + esc(p.weaknesses) + "</textarea></label></section>" +
-    '<section class="panel stack"><h3>Your data</h3><p class="muted small">Entries are saved to your account when you are signed in, and in this browser as a copy.</p><div class="row"><button class="btn" data-act="exportData">Export as JSON</button><button class="btn danger" data-act="resetAll">' + (ai.confirmReset ? "Click again to erase everything" : "Erase everything") + "</button></div></section>";
+    '<section class="panel stack"><h3>Your data</h3><p class="muted small">Entries are saved to your account when you are signed in, and in this browser as a copy.</p><div class="row"><button class="btn" data-act="exportData">Export as JSON</button><button class="btn" data-act="importData">Import JSON</button><input type="file" id="impfile" accept="application/json,.json" hidden><button class="btn danger" data-act="resetAll">' + (ai.confirmReset ? "Click again to erase everything" : "Erase everything") + "</button></div></section>";
 };
 
 /* ---------- render ---------- */
@@ -875,6 +985,7 @@ function render() {
   ensureCareer();
   const nav = $("#nav");
   nav.innerHTML = VIEWS.map(v => '<a href="#' + v[0] + '"' + (v[0] === view ? ' aria-current="page"' : "") + ">" + v[1] + "</a>").join("");
+  const cur = nav.querySelector('[aria-current]'); if (cur && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = cur.offsetLeft - (nav.clientWidth - cur.offsetWidth) / 2;
   $("#main").innerHTML = '<div id="due"></div>' + (views[view] || views.today)();
   renderDue();
 }
@@ -958,7 +1069,15 @@ const acts = {
   addSuggested(t) { const h = ai.habits[+t.dataset.i]; if (!h) return; S.habits.push({ id: uid(), name: h.name, kind: h.kind === "avoid" ? "avoid" : "build" }); ai.habits.splice(+t.dataset.i, 1); save(); render(); },
   applyRoutine(t) { const items = ai.routine.map(r => ({ id: uid(), time: r.time, label: r.label, cat: CATS[r.cat] ? r.cat : "mind" })); S.routine = t.dataset.mode === "replace" ? items : S.routine.concat(items); ai.routine = null; save(); render(); },
   copyDraft(t) { const txt = ai["d" + t.dataset.id] || ""; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { t.textContent = "Copied"; }, () => { t.textContent = "Select the text and copy"; }); },
-  async exportData() { try { const dl = await window.claude.use("downloads"); if (!dl) throw 0; await dl.save({ filename: "longview-data.json", data: JSON.stringify(S, null, 2) }); } catch (e) { if (!e || e.code !== "declined") setStatus("Export is not available in this view"); } },
+  exportData() {
+    try {
+      const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = "longview-data-" + today() + ".json"; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e) { setStatus("Export failed"); }
+  },
+  importData() { const f = $("#impfile"); if (f) f.click(); },
   resetAll(t) { if (!ai.confirmReset) { ai.confirmReset = true; render(); return; } ai.confirmReset = false; S = emptyAll(); D = {}; save(); location.hash = "#today"; route(); },
   stop() { if (ctl) ctl.abort(); },
   coachChip(t) { sendCoach(t.dataset.q); },
@@ -1036,6 +1155,36 @@ document.addEventListener("change", e => {
   else if (t.dataset.draft) D[t.dataset.draft] = t.value;
 });
 
+
+document.addEventListener("change", e => {
+  const t = e.target; if (!t || t.id !== "impfile" || !t.files || !t.files[0]) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const j = JSON.parse(rd.result);
+      if (!j || !Array.isArray(j.habits) || !Array.isArray(j.routine) || !j.profile) throw 0;
+      if (!confirm("Replace everything in the app with this file?")) return;
+      S = j; S.rdone = S.rdone || {}; S.demo = !!S.demo; save(); render(); setStatus("Imported");
+    } catch (err) { setStatus("That file is not a Longview export"); }
+  };
+  rd.readAsText(t.files[0]); t.value = "";
+});
+
+
+/* ---------- install as an app (PWA) ---------- */
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => { }));
+let installEvt = null;
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; const b = $("#installBtn"); if (b && !standalone) b.hidden = false; });
+addEventListener("appinstalled", () => { installEvt = null; const b = $("#installBtn"); if (b) b.hidden = true; });
+$("#installBtn").addEventListener("click", async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => { }); installEvt = null; $("#installBtn").hidden = true; });
+(function () {
+  let hid = false; try { hid = localStorage.getItem("longview.ioshint") === "1"; } catch (e) { }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone;
+  const h = $("#iosHint"); if (h && ios && !hid) h.hidden = false;
+  const x = $("#iosHide"); if (x) x.addEventListener("click", ev => { ev.preventDefault(); h.hidden = true; try { localStorage.setItem("longview.ioshint", "1"); } catch (e) { } });
+})();
+
 /* ---------- boot ---------- */
 S = lsGet();
 if (!S || !S.habits) S = demoState();
@@ -1043,7 +1192,7 @@ S.rdone = S.rdone || {};
 GAP = S.lastOpen ? Math.max(0, diffDays(today(), S.lastOpen)) : 0;
 if (S.lastOpen !== today()) { S.lastOpen = today(); save(); }
 route();
-connectStore();
+setTimeout(connectStore, 60);
 </script>
 
 </body></html>

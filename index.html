@@ -147,6 +147,13 @@ th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .ar { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif; line-height: 1.85; display: flex; flex-direction: column; gap: 20px; }
 .ar h2, .ar h3 { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif; letter-spacing: 0; line-height: 1.4; }
 .ar .label { letter-spacing: 0; text-transform: none; font-size: 0.8rem; }
+.ar .ai ul { padding-left: 0; padding-right: 18px; }
+.quote { font-family: var(--font-display); font-size: 1.4rem; line-height: 1.5; font-weight: 500; letter-spacing: -0.005em; text-wrap: pretty; }
+.quote.arq { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif; font-size: 1.3rem; line-height: 1.95; letter-spacing: 0; }
+details.why summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+details.why summary::-webkit-details-marker { display: none; }
+details.why summary::after { content: "+"; font-family: var(--font-mono); color: var(--ink2); }
+details.why[open] summary::after { content: "–"; }
 .typewrap { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 @media (max-width: 899px) {
   .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
@@ -252,7 +259,8 @@ let D = {};            // unsaved form drafts, kept across re-renders
 let view = "today";
 let ai = {};           // transient AI results and busy flags
 let coachTurns = [];
-const VIEWS = [["today", "Today"], ["habits", "Habits"], ["journal", "Journal"], ["routine", "Routine"], ["career", "Career"], ["people", "People"], ["brain", "Brain"], ["type", "Type"], ["coach", "Coach"], ["me", "Me"]];
+let GAP = 0;           // days away from the app, measured at load
+const VIEWS = [["today", "Today"], ["why", "Why"], ["week", "Week"], ["habits", "Habits"], ["journal", "Journal"], ["routine", "Routine"], ["career", "Career"], ["people", "People"], ["brain", "Brain"], ["type", "MBTI"], ["enneagram", "Enneagram"], ["coach", "Coach"], ["me", "Me"]];
 
 /* ---------- storage: private db document when signed in, localStorage as a mirror ---------- */
 const LS = "longview.v1";
@@ -293,8 +301,8 @@ const W = { routine: 25, habits: 25, sleep: 25, mind: 10, connect: 15 };
 const PNAME = { routine: "Routine", habits: "Habits", sleep: "Sleep", mind: "Mind", connect: "Connection" };
 const sleepScore = h => h >= 7 && h <= 9 ? 100 : h < 7 ? Math.max(0, 100 - (7 - h) * 28) : Math.max(0, 100 - (h - 9) * 28);
 function firstTracked() {
-  const ks = [...Object.keys(S.hlog), ...Object.keys(S.rlog), ...Object.keys(S.checkin), ...S.journal.map(j => j.date)];
-  const nonEmpty = ks.filter(k => (S.hlog[k] && Object.keys(S.hlog[k]).length) || (S.rlog[k] && Object.keys(S.rlog[k]).length) || S.checkin[k] || S.journal.some(j => j.date === k));
+  const ks = [...Object.keys(S.hlog), ...Object.keys(S.rlog), ...Object.keys(S.checkin), ...S.journal.map(j => j.date), ...Object.keys((S.rough && S.rough.on) || {})];
+  const nonEmpty = ks.filter(k => (S.hlog[k] && Object.keys(S.hlog[k]).length) || (S.rlog[k] && Object.keys(S.rlog[k]).length) || S.checkin[k] || S.journal.some(j => j.date === k) || (S.rough && S.rough.on[k]));
   return nonEmpty.length ? nonEmpty.sort()[0] : null;
 }
 function dayP(k) {
@@ -302,6 +310,7 @@ function dayP(k) {
   const rs = S.routine, hs = S.habits;
   p.routine = rs.length ? rs.filter(r => (S.rlog[k] || {})[r.id]).length / rs.length * 100 : null;
   p.habits = hs.length ? hs.filter(h => (S.hlog[k] || {})[h.id]).length / hs.length * 100 : null;
+  if (isRough(k)) { const rr = roughCount(k) / 3 * 100; p.routine = Math.max(p.routine || 0, rr); p.habits = Math.max(p.habits || 0, rr); }
   const c = S.checkin[k];
   p.sleep = c && c.sleep !== "" && c.sleep != null ? sleepScore(+c.sleep) : null;
   const j = S.journal.some(x => x.date === k) ? 1 : 0;
@@ -410,14 +419,14 @@ function errText(e) {
 function ctx() {
   const P = pil();
   return JSON.stringify({
-    identity: S.profile.type, wake: S.profile.wake, bedtime: S.profile.sleep, goals: S.profile.goals, strengths: S.profile.strengths, weaknesses: S.profile.weaknesses,
+    identity: S.profile.type + ", Enneagram 5w6", wake: S.profile.wake, bedtime: S.profile.sleep, goals: S.profile.goals, strengths: S.profile.strengths, weaknesses: S.profile.weaknesses,
     last14days: P ? { overall: Math.round(P.overall), pillars: Object.fromEntries(Object.entries(P.p).map(([k, v]) => [PNAME[k], v == null ? null : Math.round(v)])), avgSleepHours: avgSleep() ? +avgSleep().toFixed(1) : null } : null,
     habits: S.habits.map(h => ({ name: h.name, kind: h.kind, doneRate: habitRate(h) == null ? null : Math.round(habitRate(h) * 100) + "%" })),
     routine: S.routine.map(r => r.time + " " + r.label),
     recentJournal: S.journal.slice(0, 3).map(j => ({ date: j.date, text: j.text.slice(0, 500) })),
     people: S.people.map(p => ({ rel: p.rel, daysSinceContact: p.last ? diffDays(today(), p.last) : null, wantedEveryDays: p.cadence })),
     contactsLast14Days: contactsIn(14).length, weeklyContactGoal: S.social.weekly,
-    usingExampleData: S.demo, career: S.career ? careerCtx() : null, selfRatedBlindSpots: typeFocus()
+    usingExampleData: S.demo, career: S.career ? careerCtx() : null, selfRatedBlindSpots: typeFocus(), myWhy: S.why ? (S.why.text || WHY_DEFAULT[S.why.lang] || "").slice(0, 400) : null
   });
 }
 const COACH_RULES = "You are Longview, a candid long-horizon coach inside a personal planning app. The user identifies as an INTJ and wants a better future by building on strengths and fixing weaknesses. Rules: be direct and specific, never flattering; use their numbers; reason in terms of strategy and compounding, without stereotyping; brain and health statements must match mainstream evidence and say so when evidence is only associational; no diagnoses; you are not a doctor. If they mention wanting to harm themselves, say so plainly and urge them to contact local emergency services or a crisis line. Plain text only, no markdown, short paragraphs. If usingExampleData is true, say the numbers are examples. Their data: ";
@@ -441,7 +450,7 @@ views.today = () => {
   const pj = projections();
   const nextR = S.routine.filter(r => !(todayR()[r.id])).find(r => r.time >= nowHM());
   return demoBanner() +
-    '<div class="head"><div><h2>' + new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + '</h2></div></div>' +
+    gapBanner() + whyStrip() + '<div class="head"><div><h2>' + new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + '</h2></div><button class="btn' + (isRough(today()) ? " primary" : "") + '" data-act="roughToggle">' + (isRough(today()) ? "Rough day: on" : "Having a rough day?") + "</button></div>" + roughPanel() +
     '<section class="panel"><div class="hero"><div class="stack" style="gap:8px"><div class="label">Outlook score, last 14 days</div><div class="score">' + (P ? Math.round(P.overall) : "–") + '<small>/ 100</small></div><div><b>' + L[0] + '</b><div class="muted small">' + L[1] + '</div></div></div>' +
     '<div class="stack" style="gap:8px">' + (sr ? trajectory() + '<p class="small muted">Dashed line: where the last 14 days point if nothing changes. Your score is ' + trend + '. It is a projection from your own logs, not a medical prediction.</p>' : '<p class="muted">Log today to start the line.</p>') + '</div></div></section>' +
     '<section class="panel"><h3>What moves your score</h3>' + pillarsHtml() + "</section>" +
@@ -485,7 +494,7 @@ views.routine = () => {
 };
 const TYPE = {
   en: {
-    title: "Type", intro: "A map of how your mind tends to work, what it does well, and where it tends to fail you. Read it as a mirror, then rate what actually fits you.",
+    title: "MBTI", intro: "A map of how your mind tends to work, what it does well, and where it tends to fail you. Read it as a mirror, then rate what actually fits you.",
     note: "MBTI and the cognitive-function model are a reflection tool, not established science: type tests have weak reliability and the model is not validated. Use it to ask better questions about yourself, not as a verdict. Being an INTJ describes a preference. It is not a reason you cannot have friends or feel things.",
     stackH: "The four main positions", shadowH: "The four shadow positions",
     stackIntro: "Each type has eight cognitive functions in a fixed order. For INTJ the order is Ni, Te, Fi, Se, then Ne, Ti, Fe, Si. The first four are the ones you use consciously. Their strength and maturity fall in that order: Hero, Parent, Child, Inferior.",
@@ -525,7 +534,7 @@ const TYPE = {
     focusH: "Your focus areas", focusEmpty: "Rate the blind spots above and your top three appear here. The coach will use them too."
   },
   ar: {
-    title: "النمط", intro: "خريطة لطريقة عمل عقلك: ما يجيده وأين يخذلك. اقرأها كمرآة، ثم قيّم ما يناسبك فعلًا.",
+    title: "MBTI", intro: "خريطة لطريقة عمل عقلك: ما يجيده وأين يخذلك. اقرأها كمرآة، ثم قيّم ما يناسبك فعلًا.",
     note: "نموذج MBTI ووظائف الإدراك أداة للتأمل وليست علمًا مثبتًا: اختبارات النمط ضعيفة الثبات والنموذج لم يُتحقق منه علميًا. استخدمه لتطرح على نفسك أسئلة أفضل، لا كحكم نهائي. كونك INTJ يصف ميلًا، ولا يعني أنك عاجز عن تكوين صداقات أو عن الشعور.",
     stackH: "المواقع الأربعة الأساسية", shadowH: "مواقع الظل الأربعة",
     stackIntro: "لكل نمط ثماني وظائف إدراكية بترتيب ثابت. عند INTJ الترتيب: Ni ثم Te ثم Fi ثم Se، وبعدها Ne ثم Ti ثم Fe ثم Si. الأربع الأولى هي التي تستخدمها بوعي، وتتناقص قوتها ونضجها بهذا الترتيب: البطل، الأب، الطفل، الأدنى.",
@@ -565,16 +574,150 @@ const TYPE = {
     focusH: "محاور تركيزك", focusEmpty: "قيّم النقاط العمياء أعلاه وستظهر أعلى ثلاث هنا. وسيستخدمها المدرّب أيضًا."
   }
 };
-function typeFocus() { const m = S.mind; if (!m) return []; return TYPE.en.weak.filter(w => (m.rate[w.id] || 0) >= 3).sort((a, b) => m.rate[b.id] - m.rate[a.id]).slice(0, 3).map(w => w.t + " (" + m.rate[w.id] + "/5)"); }
-views.type = () => {
-  const m = S.mind, L = TYPE[m.lang] || TYPE.en, ar = m.lang === "ar";
-  const card = s => '<section class="panel"><div class="row between"><h3>' + esc(s.pos) + '</h3><span class="chip acc mono">' + esc(s.fn) + '</span></div><div class="label" style="margin:6px 0">' + esc(s.name) + '</div><p class="muted">' + esc(s.text) + "</p></section>";
+const ENN = {
+  en: {
+    title: "Enneagram", intro: "You identified as a 5 with a 6 wing (5w6). This page maps what that pattern tends to want, fear and do, and how it can grow. Read it as a mirror, then rate what fits.",
+    note: "The Enneagram is a reflection tool, not established science, and like MBTI it should not be treated as a verdict. If a description fits, use it to notice a pattern. If it does not, drop it.",
+    glanceH: "Your type at a glance",
+    glance: [["Type", "5, The Investigator"], ["Wing", "6, so a 5w6: The Problem Solver"], ["Centre", "Head (thinking). The core emotion here is anxiety about security and support."], ["Core desire", "To be capable, competent and to understand."], ["Core fear", "Being useless, incapable or overwhelmed."], ["Habit under pressure", "Hoarding energy, time, knowledge and privacy, and retreating to think."]],
+    wingH: "What the 6 wing adds",
+    wing: "A 5w6 is usually more practical, loyal, cautious and team-minded than the other wing (5w4). You prefer a system, a mentor or a trusted source of truth, you test ideas for flaws, and you worry about what could go wrong. The cost is more doubt and more waiting for certainty before you commit.",
+    looksH: "What it looks like for you",
+    looks: [
+      ["One more tutorial first", "You study another course or polish the portfolio before applying, because you do not feel ready yet. Readiness never arrives on its own."],
+      ["Energy as a budget", "You track what each interaction costs. Calls, meetings and crowds drain you, so you protect your time and then find none is left for people."],
+      ["Retreating into your head", "Under stress you analyse the feeling instead of feeling it, and you pull away from the people who could help."],
+      ["Wanting a guarantee", "With the 6 wing you want proof the plan will work before committing, and you scan for what could go wrong."],
+      ["Privacy as protection", "Keeping your inner life private is a healthy instinct. The risk is when private slides into isolated."]
+    ],
+    levelsH: "Healthy, average and under strain",
+    levels: [["Healthy", "Curious, original, calm and generous with what you know. You act on your insight and stay connected to a few people."], ["Average", "You hoard time and knowledge, wait until you feel fully ready, and keep people at a distance. Ideas stay in your head."], ["Under long strain", "Numbness, withdrawal and a feeling that nothing matters. This is a stress pattern, not who you are, and it is exactly when a doctor or therapist helps most."]],
+    arrowsH: "Growth and stress directions",
+    arrows: [["Growth: toward 8", "The Challenger. Act on what you believe, take up space, be direct, and use your body and energy without counting every cost. Send the application. Ask for the interview."], ["Stress: toward 7", "The Enthusiast in its unhealthy form. You scatter: many half-started things, endless entertainment and fast comfort to escape the anxiety."]],
+    combineH: "INTJ and 5w6 together",
+    combine: "Both lean toward thinking, planning and privacy, so the strengths stack: deep expertise, independence and long-range planning. The risks stack too: over-analysis, delay and too little contact with people. The bridge for both is the body and action: finish something small, move, and let one person see your work.",
+    str: [["Deep expertise", "You go further into a subject than most people will."], ["Independence", "You can work alone without supervision."], ["Calm and reliability", "The 6 wing makes you dependable and steady in a crisis."], ["Sharp analysis", "You notice flaws and patterns that others miss."], ["Practical problem solving", "You like solutions that work, not just ideas."], ["Principled loyalty", "Once you trust someone, you stay."]],
+    weak: [
+      { id: "e1", t: "Over-preparing before acting", text: "You wait to feel ready, so action keeps getting postponed.", fix: "Career tab: apply at 70% ready. Count sent applications, not hours studied." },
+      { id: "e2", t: "Hoarding energy and withdrawing", text: "You protect your energy so tightly that people and opportunities get none of it.", fix: "People tab: schedule a low-cost contact each week and plan recovery time after it." },
+      { id: "e3", t: "Living in the head", text: "You think about feelings instead of feeling them, so they stay unprocessed.", fix: "Journal: write what you felt in your body, not only what you thought." },
+      { id: "e4", t: "Needing a guarantee", text: "The 6 wing wants certainty before committing, but nothing worth doing comes with one.", fix: "Week tab: commit to the next small step only, and accept the uncertainty beyond it." },
+      { id: "e5", t: "Feeling not competent enough yet", text: "The core fear says you are not capable yet, so hard moments become reasons to stop.", fix: "Rough-day mode: lower the bar instead of quitting. Log wins to build evidence against the fear." },
+      { id: "e6", t: "Being stingy with time and effort", text: "You hold your effort back, then wonder why nothing grows.", fix: "Pick one thing a week to give fully: a project, a message, an hour of help." },
+      { id: "e7", t: "Scattered escape under stress", text: "Under pressure you flee into entertainment and half-started things.", fix: "Use the rough-day minimum and finish one small thing before opening anything new." }
+    ],
+    practicesH: "Growth practices",
+    practices: ["Act when you are 70% ready.", "Budget your energy: schedule recovery, and give one thing freely each week.", "Name one feeling a day, and where it sits in your body.", "Show your work early to one trusted person.", "Do one bold, direct action a week, the 8 move: ask, apply, say no."]
+  },
+  ar: {
+    title: "الإنياغرام", intro: "عرّفت نفسك كنمط 5 بجناح 6 (5w6). تصف هذه الصفحة ما يرغب فيه هذا النمط عادة وما يخشاه وما يفعله وكيف ينمو. اقرأها كمرآة ثم قيّم ما يناسبك.",
+    note: "الإنياغرام أداة للتأمل وليس علمًا مثبتًا، ومثل MBTI لا يُعامل كحكم نهائي. إن كان الوصف يناسبك فاستخدمه لملاحظة نمط، وإن لم يناسبك فاتركه.",
+    glanceH: "نمطك في لمحة",
+    glance: [["النمط", "5، الباحث"], ["الجناح", "6، فأنت 5w6: حلّال المشكلات"], ["المركز", "الرأس (التفكير). والانفعال الأساسي هنا قلق على الأمان والدعم."], ["الرغبة الأساسية", "أن تكون كفؤًا وقادرًا وأن تفهم."], ["الخوف الأساسي", "أن تكون عديم الفائدة أو عاجزًا أو مغمورًا."], ["العادة تحت الضغط", "اكتناز الطاقة والوقت والمعرفة والخصوصية، والانسحاب للتفكير."]],
+    wingH: "ماذا يضيف جناح 6",
+    wing: "غالبًا ما يكون 5w6 أكثر عملية وولاءً وحذرًا وميلًا للعمل الجماعي من الجناح الآخر (5w4). تفضّل نظامًا أو مرشدًا أو مصدرًا موثوقًا للحقيقة، وتختبر الأفكار بحثًا عن عيوبها، وتقلق مما قد يسوء. الثمن مزيد من الشك ومزيد من انتظار اليقين قبل الالتزام.",
+    looksH: "كيف يظهر هذا في حياتك",
+    looks: [
+      ["دورة أخرى أولًا", "تدرس دورة أخرى أو تصقل ملف أعمالك قبل التقديم لأنك لا تشعر أنك جاهز بعد. الجاهزية لا تأتي وحدها."],
+      ["الطاقة كميزانية", "تحسب ما يكلفك كل تفاعل. المكالمات والاجتماعات والزحام تستنزفك، فتحمي وقتك ثم تجد أنه لم يبق منه شيء للناس."],
+      ["الانسحاب إلى الرأس", "تحت الضغط تحلل الشعور بدل أن تشعر به، وتبتعد عن الناس الذين يمكنهم مساعدتك."],
+      ["طلب الضمان", "مع جناح 6 تريد دليلًا على نجاح الخطة قبل الالتزام، وتفتش عما قد يسوء."],
+      ["الخصوصية كحماية", "حفظ حياتك الداخلية خاصة غريزة صحية. الخطر حين ينزلق الخاص إلى العزلة."]
+    ],
+    levelsH: "الصحي والمتوسط وتحت الضغط",
+    levels: [["صحي", "فضولي أصيل هادئ وسخي بما تعرف. تتصرف بناءً على بصيرتك وتبقى على صلة بأشخاص قليلين."], ["متوسط", "تكتنز الوقت والمعرفة وتنتظر حتى تشعر بجاهزية كاملة وتُبقي الناس بعيدين. تبقى الأفكار في رأسك."], ["تحت ضغط طويل", "خدر وانسحاب وشعور بأن لا شيء يهم. هذا نمط ضغط وليس حقيقتك، وهو بالضبط الوقت الذي يفيد فيه طبيب أو معالج أكثر من أي وقت."]],
+    arrowsH: "اتجاها النمو والضغط",
+    arrows: [["النمو: نحو 8", "المتحدّي. تصرّف بما تؤمن به وخذ مساحتك وكن مباشرًا واستخدم جسدك وطاقتك دون حساب كل تكلفة. أرسل طلب التوظيف. اطلب المقابلة."], ["الضغط: نحو 7", "المتحمس في صورته غير الصحية. تتشتت: أشياء كثيرة نصف مبدوءة وترفيه بلا نهاية وراحة سريعة للهروب من القلق."]],
+    combineH: "INTJ و5w6 معًا",
+    combine: "كلاهما يميل إلى التفكير والتخطيط والخصوصية، فتتراكم نقاط القوة: خبرة عميقة واستقلال وتخطيط بعيد المدى. وتتراكم المخاطر أيضًا: فرط التحليل والتأجيل وقلة الاتصال بالناس. الجسر لكليهما هو الجسد والفعل: أنجز شيئًا صغيرًا وتحرك ودع شخصًا واحدًا يرى عملك.",
+    str: [["خبرة عميقة", "تذهب في موضوع أبعد مما يذهب معظم الناس."], ["الاستقلال", "تعمل وحدك دون إشراف."], ["الهدوء والموثوقية", "جناح 6 يجعلك يُعتمد عليك وثابتًا في الأزمات."], ["تحليل حاد", "تلاحظ عيوبًا وأنماطًا يفوتها غيرك."], ["حل عملي للمشكلات", "تحب حلولًا تعمل لا أفكارًا فقط."], ["ولاء مبدئي", "حين تثق بشخص تبقى معه."]],
+    weak: [
+      { id: "e1", t: "الإفراط في التحضير قبل الفعل", text: "تنتظر أن تشعر بالجاهزية فيتأجل الفعل باستمرار.", fix: "تبويب Career: قدّم وأنت جاهز بنسبة 70%. عُدّ الطلبات المرسلة لا ساعات الدراسة." },
+      { id: "e2", t: "اكتناز الطاقة والانسحاب", text: "تحمي طاقتك بإحكام حتى لا يصل منها شيء إلى الناس والفرص.", fix: "تبويب People: خصص تواصلًا قليل التكلفة كل أسبوع وخطط لوقت راحة بعده." },
+      { id: "e3", t: "العيش في الرأس", text: "تفكر في المشاعر بدل أن تشعر بها فتبقى بلا معالجة.", fix: "تبويب Journal: اكتب ما شعرت به في جسدك لا ما فكرت به فقط." },
+      { id: "e4", t: "الحاجة إلى ضمان", text: "جناح 6 يريد اليقين قبل الالتزام، لكن لا شيء يستحق يأتي بضمان.", fix: "تبويب Week: التزم بالخطوة الصغيرة التالية فقط وتقبّل عدم اليقين بعدها." },
+      { id: "e5", t: "الشعور بعدم الكفاءة بعد", text: "الخوف الأساسي يقول إنك لست قادرًا بعد، فتصبح اللحظات الصعبة أسبابًا للتوقف.", fix: "وضع اليوم السيء: اخفض المعيار بدل أن تستسلم. سجّل إنجازاتك لتبني دليلًا ضد الخوف." },
+      { id: "e6", t: "البخل بالوقت والجهد", text: "تحجز جهدك ثم تتساءل لماذا لا شيء ينمو.", fix: "اختر شيئًا واحدًا كل أسبوع تعطيه بالكامل: مشروع أو رسالة أو ساعة مساعدة." },
+      { id: "e7", t: "الهروب المتشتت تحت الضغط", text: "تحت الضغط تهرب إلى الترفيه والأشياء نصف المبدوءة.", fix: "استخدم الحد الأدنى ليوم سيء وأنهِ شيئًا صغيرًا قبل أن تفتح أي شيء جديد." }
+    ],
+    practicesH: "ممارسات النمو",
+    practices: ["تحرّك وأنت جاهز بنسبة 70%.", "ضع ميزانية لطاقتك: خصص وقتًا للراحة وأعطِ شيئًا واحدًا بسخاء كل أسبوع.", "سمِّ شعورًا واحدًا كل يوم وأين تشعر به في جسدك.", "أرِ عملك مبكرًا لشخص واحد موثوق.", "افعل فعلًا جريئًا ومباشرًا واحدًا كل أسبوع، وهي حركة 8: اطلب، قدّم، قل لا."]
+  }
+};
+views.enneagram = () => {
+  const m = S.mind, L = ENN[m.lang] || ENN.en, T = TYPE[m.lang] || TYPE.en, ar = m.lang === "ar";
+  const tx = r => '<section class="panel stack"><h3>' + esc(r[0]) + '</h3><p class="muted">' + esc(r[1]) + "</p></section>";
   const top = L.weak.filter(w => (m.rate[w.id] || 0) >= 3).sort((a, b) => m.rate[b.id] - m.rate[a.id]).slice(0, 3);
   return '<div class="typewrap' + (ar ? " ar" : "") + '" dir="' + (ar ? "rtl" : "ltr") + '" lang="' + (ar ? "ar" : "en") + '">' +
     '<div class="head"><div><h2>' + esc(L.title) + '</h2><p>' + esc(L.intro) + '</p></div><div class="row"><button class="btn' + (ar ? "" : " primary") + '" data-act="lang" data-l="en">English</button><button class="btn' + (ar ? " primary" : "") + '" data-act="lang" data-l="ar">العربية</button></div></div>' +
     '<div class="banner"><span class="small">' + esc(L.note) + "</span></div>" +
-    '<section class="stack"><h3>' + esc(L.stackH) + '</h3><p class="muted">' + esc(L.stackIntro) + '</p><div class="brain">' + L.stack.map(card).join("") + "</div></section>" +
-    '<section class="stack"><h3>' + esc(L.shadowH) + '</h3><p class="muted">' + esc(L.shadowIntro) + '</p><div class="brain">' + L.shadow.map(card).join("") + "</div></section>" +
+    '<section class="panel stack"><h3>' + esc(L.glanceH) + "</h3>" + L.glance.map(r => '<div class="item"><div class="grow"><div class="label">' + esc(r[0]) + "</div><div>" + esc(r[1]) + "</div></div></div>").join("") + "</section>" +
+    '<section class="panel stack"><h3>' + esc(L.wingH) + '</h3><p class="muted">' + esc(L.wing) + "</p></section>" +
+    '<section class="stack"><h3>' + esc(L.looksH) + '</h3><div class="brain">' + L.looks.map(tx).join("") + "</div></section>" +
+    '<section class="stack"><h3>' + esc(L.levelsH) + '</h3><div class="brain">' + L.levels.map(tx).join("") + "</div></section>" +
+    '<section class="stack"><h3>' + esc(L.arrowsH) + '</h3><div class="brain">' + L.arrows.map(tx).join("") + "</div></section>" +
+    '<section class="panel stack"><h3>' + esc(L.combineH) + '</h3><p class="muted">' + esc(L.combine) + "</p></section>" +
+    '<section class="panel stack"><h3>' + esc(T.strH) + "</h3>" + L.str.map(s => '<div class="item"><div class="grow"><b>' + esc(s[0]) + '</b><div class="muted">' + esc(s[1]) + "</div></div></div>").join("") + "</section>" +
+    '<section class="stack"><h3>' + esc(T.weakH) + '</h3><p class="muted small">' + esc(T.rateKey) + "</p>" + L.weak.map(w => { const r = m.rate[w.id] || 0; return '<section class="panel stack"><h3>' + esc(w.t) + '</h3><p class="muted">' + esc(w.text) + '</p><p><b>' + esc(T.inApp) + "</b> " + esc(w.fix) + '</p><div class="row"><span class="small muted">' + esc(T.rateQ) + '</span><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="rate" data-id="' + w.id + '" data-v="' + n + '" aria-pressed="' + (r === n) + '" aria-label="' + n + '">' + n + "</button>").join("") + "</div></div></section>"; }).join("") + "</section>" +
+    '<section class="panel stack"><h3>' + esc(L.practicesH) + "</h3>" + L.practices.map(p => '<div class="item"><div class="grow">' + esc(p) + "</div></div>").join("") + "</section>" +
+    '<section class="panel stack"><h3>' + esc(T.focusH) + '</h3>' + (top.length ? top.map(w => '<div><b>' + esc(w.t) + '</b> <span class="chip acc mono">' + m.rate[w.id] + '/5</span><p class="muted">' + esc(w.fix) + "</p></div>").join("") : '<p class="muted">' + esc(T.focusEmpty) + "</p>") + "</section></div>";
+};
+const WHY_DEFAULT = {
+  en: "Somewhere there is a version of me who made better decisions and ended up further along. He is not luckier or smarter. He decided differently, again and again, on ordinary days. I am not behind him. I am standing at the same fork he stood at, and today I choose which of us I become.",
+  ar: "في مكان ما توجد نسخة مني اتخذت قرارات أفضل، فوصلت أبعد مما وصلت أنا. هو ليس أذكى مني ولا أوفر حظًا. هو ببساطة قرّر بشكل مختلف، مرة بعد مرة، في أيام عادية. أنا لست متأخرًا عنه. أنا واقف عند نفس مفترق الطرق الذي وقف عنده، واليوم أختار أي واحد منا سأكون."
+};
+function whyText() { return S.why.text || WHY_DEFAULT[S.why.lang] || WHY_DEFAULT.en; }
+function whyStrip() {
+  const w = S.why, ar = w.lang === "ar", from = addDays(today(), -6), r = w.forks.filter(f => f.date >= from), nw = r.filter(f => f.way === "new").length;
+  return '<details class="panel why"><summary><span class="label">' + (ar ? "لماذا أفعل هذا" : "Why I am doing this") + '</span><span class="small muted">' + (r.length ? (ar ? "هذا الأسبوع: " + nw + " من " + r.length + " قرارات في المسار الجديد" : "This week: " + nw + " of " + r.length + " forks on the new path") : "") + '</span></summary><p class="quote' + (ar ? " arq" : "") + '" dir="' + (ar ? "rtl" : "ltr") + '" style="margin-top:12px">' + esc(whyText()) + "</p></details>";
+}
+views.why = () => {
+  const w = S.why, ar = w.lang === "ar", from = addDays(today(), -29), rec = w.forks.filter(f => f.date >= from), nw = rec.filter(f => f.way === "new").length;
+  return demoBanner() + '<div class="head"><div><h2>Why</h2><p>The reason this exists, in your own words, and a place to practise the one skill it depends on: choosing the next decision on purpose.</p></div><div class="row"><button class="btn' + (ar ? "" : " primary") + '" data-act="whyLang" data-l="en">English</button><button class="btn' + (ar ? " primary" : "") + '" data-act="whyLang" data-l="ar">العربية</button></div></div>' +
+    '<section class="panel stack"><p class="quote' + (ar ? " arq" : "") + '" dir="' + (ar ? "rtl" : "ltr") + '">' + esc(whyText()) + '</p><p class="muted small">The other version of you is not made of luck or talent. He is made of ordinary decisions, and every day you are at the same fork. If comparing yourself to him ever starts to feel like a stick instead of a map, edit the message below so it points at the person you are building.</p>' +
+    '<label class="field">Edit your message<textarea data-set="why.text" style="min-height:96px" dir="auto" placeholder="Leave empty to use the default">' + esc(w.text) + '</textarea></label><div class="row"><button class="btn" data-act="whyReset">Use the default</button></div></section>' +
+    '<section class="panel stack"><h3>The fork</h3><p class="muted">Before a decision that matters, write it down. Ask the other you what he would do, then log which way you actually went. Either answer is data.</p><label class="field">The decision<textarea id="fdec" data-draft="fork" dir="auto" style="min-height:84px" placeholder="e.g. Skip today\'s study block because I feel flat, or do 10 minutes anyway?">' + esc(D.fork || "") + '</textarea></label><div class="row"><button class="btn primary" data-act="askFork"' + (ai.forkBusy ? " disabled" : "") + ">" + (ai.forkBusy ? "Thinking..." : "Ask the other me") + "</button>" + (ai.forkBusy ? '<button class="btn" data-act="stop">Stop</button>' : "") + '</div><div class="out" id="forkOut">' + esc(ai.fork || "") + '</div><div class="row"><span class="small muted">I went with:</span><button class="btn" data-act="logFork" data-way="new">The new path</button><button class="btn" data-act="logFork" data-way="old">The old pattern</button></div></section>' +
+    '<section class="panel stack"><div class="row between"><h3>Your forks</h3>' + (rec.length ? '<span class="chip acc">' + nw + " of " + rec.length + " on the new path, 30 days</span>" : "") + "</div>" + (w.forks.length ? w.forks.slice(0, 12).map(f => '<div class="item"><span class="time">' + fmt(f.date) + '</span><div class="grow">' + esc(f.text) + '</div><span class="chip ' + (f.way === "new" ? "good" : "warn") + '">' + (f.way === "new" ? "new path" : "old pattern") + "</span></div>").join("") + '<p class="muted small">The old pattern is not failure. It is information: notice what was happening right before it.</p>' : '<p class="muted">No forks logged yet.</p>') + "</section>";
+};
+const LAB = {
+  en: { look: "What it looks like", wrong: "When it goes wrong", show: "How it shows up", work: "How to work with it" },
+  ar: { look: "كيف تظهر في حياتك", wrong: "حين تسوء", show: "كيف تظهر", work: "كيف تتعامل معها" }
+};
+const EX = {
+  en: {
+    Ni: { ex: ["In a meeting or a project you sense the plan will fail three steps ahead but cannot yet explain why, and people ask for proof.", "You choose a career direction because it feels right for where the field is going, then struggle to explain the reasoning to family.", "Out of nowhere you see why two unrelated things connect, usually in the shower or on a walk."], note: "You stay certain for weeks about an outcome you never tested, such as assuming nobody will hire you." },
+    Te: { ex: ["You turn I want a job in data into a checklist: five applications a week, two portfolio projects, a deadline.", "You cannot relax until your files, tasks and tools are organised and the system works.", "You judge ideas by results: does it work, and is it efficient?"], note: "You treat friends or family like projects to optimise, or snap at slow people and unclear plans." },
+    Fi: { ex: ["You have strong private values and walk away from anything that feels fake, even if it pays.", "You care deeply about a few things (a cause, a person, a craft) but cannot put it into words when asked.", "You have a hobby or side project you do only because it matters to you."], note: "A casual comment hurts, you say nothing, then go cold. Or you feel numb and cannot tell if you are sad, tired or angry." },
+    Se: { ex: ["You only notice how tired you are after a week of intense work when you crash.", "You forget meals and sleep when absorbed in a project.", "A walk, a gym session, cooking or a trip pulls you out of your head and you feel sharper afterwards."], note: "Under stress you binge scroll, snack or buy something on impulse: a quick sensory hit that leaves you worse." },
+    Ne: { ex: ["In a plan review someone suggests a new idea and you instantly list why it will fail.", "At 2 a.m. your mind spins what-if scenarios, such as I will never get a job.", "Brainstorming with people who jump from idea to idea irritates you."], note: "Write the what-ifs down, pick the likeliest one and make a plan for it. Hear the whole idea before you judge it." },
+    Ti: { ex: ["After a decision you replay every flaw in your own reasoning for hours.", "You correct small logical errors in what other people say, even when it is not the moment.", "You rewrite a finished document five times because one detail feels wrong."], note: "Define what done looks like before you start, and set a time limit for review." },
+    Fe: { ex: ["You walk into a group and cannot tell whether people like you, so you go quiet or leave early.", "You say something meant as logical and it lands as cold.", "You overdo being nice for a day, then withdraw for a week."], note: "Ask directly: how did that land? Short, honest check-ins beat guessing." },
+    Si: { ex: ["Before an interview your mind replays old rejections and mistakes, and your body tenses.", "You cling to one routine and get upset when it breaks.", "A bad memory from college keeps proving, in your head, that you always fail."], note: "Name it: that is an old memory, not a forecast. Sleep, a steady routine and a walk calm it faster than arguing with it." }
+  },
+  ar: {
+    Ni: { ex: ["في اجتماع أو مشروع تحس أن الخطة ستفشل بعد ثلاث خطوات، لكنك لا تستطيع شرح السبب بعد، فيطلب الناس دليلًا.", "تختار مسارًا مهنيًا لأنك تشعر أنه يناسب اتجاه المجال، ثم تجد صعوبة في إقناع أهلك بالمنطق.", "فجأة تدرك لماذا شيئان بلا علاقة ظاهرة مترابطان، غالبًا أثناء الاستحمام أو المشي."], note: "تظل أسابيع واثقًا من نتيجة لم تختبرها، كأن تفترض أن أحدًا لن يوظفك." },
+    Te: { ex: ["تحوّل أريد وظيفة في تحليل البيانات إلى قائمة: خمس تقديمات أسبوعيًا ومشروعان في الأعمال ومهلة محددة.", "لا ترتاح حتى تُرتَّب ملفاتك ومهامك وأدواتك ويعمل النظام.", "تحكم على الأفكار بنتائجها: هل تعمل؟ وهل هي فعّالة؟"], note: "تعامل أصدقاءك أو أسرتك كمشاريع تريد تحسينها، أو تنفعل من بطء الناس وغموض الخطط." },
+    Fi: { ex: ["لديك قيم خاصة قوية وتبتعد عن أي شيء يبدو مزيفًا حتى لو كان مربحًا.", "تهتم بعمق بأشياء قليلة (قضية أو شخص أو حرفة) لكنك لا تستطيع التعبير عنها حين يُطلب منك.", "لديك هواية أو مشروع جانبي تفعله فقط لأنه يهمك."], note: "تجرحك ملاحظة عابرة فتصمت ثم تبرد. أو تشعر بالخدر ولا تعرف هل أنت حزين أم متعب أم غاضب." },
+    Se: { ex: ["لا تلاحظ تعبك بعد أسبوع عمل مكثف إلا حين تنهار.", "تنسى الوجبات والنوم حين تنغمس في مشروع.", "مشي أو نادٍ رياضي أو طبخ أو رحلة يخرجك من رأسك وتشعر بعدها بحدة أكبر."], note: "تحت الضغط تتصفح بلا توقف أو تأكل للتعويض أو تشتري باندفاع: متعة حسية سريعة تتركك أسوأ." },
+    Ne: { ex: ["في مراجعة خطة يقترح أحدهم فكرة جديدة فتعدّد فورًا أسباب فشلها.", "في الثانية فجرًا يدور عقلك في سيناريوهات ماذا لو، مثل لن أجد وظيفة أبدًا.", "ينزعجك العصف الذهني مع من يقفزون من فكرة إلى أخرى."], note: "اكتب ما قد يحدث ثم اختر الأرجح وضع له خطة. استمع للفكرة كاملة قبل أن تحكم عليها." },
+    Ti: { ex: ["بعد قرار تعيد مراجعة كل عيوب تفكيرك لساعات.", "تصحح الأخطاء المنطقية الصغيرة في كلام الآخرين حتى حين لا يكون الوقت مناسبًا.", "تعيد كتابة مستند منتهٍ خمس مرات لأن تفصيلة واحدة تزعجك."], note: "حدّد معنى الانتهاء قبل أن تبدأ، وضع وقتًا محددًا للمراجعة." },
+    Fe: { ex: ["تدخل مجموعة ولا تعرف هل يحبك الناس، فتصمت أو تغادر مبكرًا.", "تقول شيئًا تقصده منطقيًا فيبدو باردًا.", "تبالغ في اللطف يومًا ثم تنسحب أسبوعًا."], note: "اسأل مباشرة: كيف وصلتك هذه؟ الأسئلة القصيرة الصادقة أفضل من التخمين." },
+    Si: { ex: ["قبل مقابلة عمل يعيد عقلك رفضًا وأخطاء سابقة ويتوتر جسدك.", "تتشبث بروتين واحد وتنزعج حين ينكسر.", "ذكرى سيئة من الجامعة تثبت لك في رأسك أنك دائمًا تفشل."], note: "سمّها: هذه ذكرى قديمة وليست توقعًا. النوم والروتين الثابت والمشي تهدئها أسرع من الجدال معها." }
+  }
+};
+function typeFocus() { const m = S.mind; if (!m) return []; return TYPE.en.weak.concat(ENN.en.weak).filter(w => (m.rate[w.id] || 0) >= 3).sort((a, b) => m.rate[b.id] - m.rate[a.id]).slice(0, 3).map(w => w.t + " (" + m.rate[w.id] + "/5)"); }
+views.type = () => {
+  const m = S.mind, L = TYPE[m.lang] || TYPE.en, ar = m.lang === "ar";
+  const card = (s, sh) => {
+    const X = (EX[m.lang] || EX.en)[s.fn] || { ex: [], note: "" }, B = LAB[m.lang] || LAB.en;
+    return '<section class="panel stack"><div class="row between"><h3>' + esc(s.pos) + '</h3><span class="chip acc mono">' + esc(s.fn) + '</span></div><div class="label">' + esc(s.name) + '</div><p class="muted">' + esc(s.text) + '</p><div class="ai"><div class="label">' + (sh ? B.show : B.look) + "</div><ul>" + X.ex.map(e => "<li>" + esc(e) + "</li>").join("") + '</ul><div class="label" style="margin-top:4px">' + (sh ? B.work : B.wrong) + "</div><p>" + esc(X.note) + "</p></div></section>";
+  };
+  const top = L.weak.filter(w => (m.rate[w.id] || 0) >= 3).sort((a, b) => m.rate[b.id] - m.rate[a.id]).slice(0, 3);
+  return '<div class="typewrap' + (ar ? " ar" : "") + '" dir="' + (ar ? "rtl" : "ltr") + '" lang="' + (ar ? "ar" : "en") + '">' +
+    '<div class="head"><div><h2>' + esc(L.title) + '</h2><p>' + esc(L.intro) + '</p></div><div class="row"><button class="btn' + (ar ? "" : " primary") + '" data-act="lang" data-l="en">English</button><button class="btn' + (ar ? " primary" : "") + '" data-act="lang" data-l="ar">العربية</button></div></div>' +
+    '<div class="banner"><span class="small">' + esc(L.note) + "</span></div>" +
+    '<section class="stack"><h3>' + esc(L.stackH) + '</h3><p class="muted">' + esc(L.stackIntro) + '</p><div class="brain">' + L.stack.map(s => card(s, false)).join("") + "</div></section>" +
+    '<section class="stack"><h3>' + esc(L.shadowH) + '</h3><p class="muted">' + esc(L.shadowIntro) + '</p><div class="brain">' + L.shadow.map(s => card(s, true)).join("") + "</div></section>" +
     '<section class="panel stack"><h3>' + esc(L.strH) + '</h3><p class="muted small">' + esc(L.strNote) + "</p>" + L.str.map(s => '<div class="item"><div class="grow"><b>' + esc(s[0]) + '</b><div class="muted">' + esc(s[1]) + "</div></div></div>").join("") + "</section>" +
     '<section class="stack"><h3>' + esc(L.weakH) + '</h3><p class="muted small">' + esc(L.rateKey) + '</p>' + L.weak.map(w => { const r = m.rate[w.id] || 0; return '<section class="panel stack"><h3>' + esc(w.t) + '</h3><p class="muted">' + esc(w.text) + '</p><p><b>' + esc(L.inApp) + '</b> ' + esc(w.fix) + '</p><div class="row"><span class="small muted">' + esc(L.rateQ) + '</span><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="rate" data-id="' + w.id + '" data-v="' + n + '" aria-pressed="' + (r === n) + '" aria-label="' + n + '">' + n + "</button>").join("") + "</div></div></section>"; }).join("") + "</section>" +
     '<section class="panel stack"><h3>' + esc(L.focusH) + '</h3>' + (top.length ? top.map(w => '<div><b>' + esc(w.t) + '</b> <span class="chip acc mono">' + m.rate[w.id] + '/5</span><p class="muted">' + esc(w.fix) + "</p></div>").join("") : '<p class="muted">' + esc(L.focusEmpty) + "</p>") + "</section></div>";
@@ -598,7 +741,47 @@ function newCareer(demo) {
   }
   return c;
 }
-function ensureCareer() { if (S && !S.career) S.career = newCareer(!!S.demo); if (S && !S.mind) S.mind = { lang: "en", rate: {} }; }
+function ensureCareer() {
+  if (!S) return;
+  if (!S.career) S.career = newCareer(!!S.demo);
+  if (!S.mind) S.mind = { lang: "en", rate: {} };
+  if (!S.rough) S.rough = { on: {}, log: {} };
+  if (!S.why) S.why = { text: "", lang: "ar", forks: [] };
+  if (!S.week) {
+    S.week = { commits: {}, reviews: {}, dismissed: "" };
+    if (S.demo) S.week.commits[weekStart(today())] = [{ id: uid(), text: "Send 3 job applications by Thursday", done: true }, { id: uid(), text: "Finish the write-up for one portfolio project", done: false }, { id: uid(), text: "Walk at least 4 times", done: false }];
+  }
+}
+function weekStart(k) { const d = parseKey(k); d.setDate(d.getDate() - d.getDay()); return dkey(d); }
+const ROUGH = [["sleep", "Lights out on time tonight"], ["walk", "10-minute walk or stretch"], ["skill", "30 minutes on your skill (10 is a win)"]];
+function isRough(k) { return !!(S.rough && S.rough.on[k]); }
+function roughCount(k) { const l = (S.rough && S.rough.log[k]) || {}, sk = !!(S.career && S.career.skill[k] && S.career.skill[k].s); return (l.sleep ? 1 : 0) + (l.walk ? 1 : 0) + (sk ? 1 : 0); }
+function gapBanner() {
+  if (GAP < 3 || S.week.dismissed === today()) return "";
+  return '<div class="banner due"><span><b>You have been away ' + GAP + ' days.</b> That happens. What was it?</span><span class="row">' + ["Rough stretch", "Busy", "Lost motivation", "Just forgot"].map(r => '<button class="btn" data-act="returnWhy" data-r="' + r + '">' + r + "</button>").join("") + '<button class="btn ghost" data-act="dismissGap">Dismiss</button></span></div>';
+}
+function roughPanel() {
+  const k = today(); if (!isRough(k)) return "";
+  const l = S.rough.log[k] || {}, on = id => id === "skill" ? !!(S.career.skill[k] && S.career.skill[k].s) : !!l[id];
+  return '<section class="panel stack"><h3>Rough-day minimum</h3><p class="muted">Do these three and today counts in full. Everything else is optional. A small win beats a skipped day.</p>' + ROUGH.map(r => '<div class="item' + (on(r[0]) ? " done" : "") + '"><button class="chk" role="checkbox" aria-checked="' + on(r[0]) + '" aria-label="' + esc(r[1]) + '" data-act="roughItem" data-id="' + r[0] + '"></button><div class="grow">' + esc(r[1]) + "</div></div>").join("") + "</section>";
+}
+function weekCtx() {
+  return lastDays(7).map(k => { const p = dayP(k), c = S.checkin[k] || {}; return { date: k, routinePct: p.routine == null ? null : Math.round(p.routine), habitsPct: p.habits == null ? null : Math.round(p.habits), sleepHours: c.sleep === "" || c.sleep == null ? null : +c.sleep, energy: c.energy || null, mood: c.mood || null, journaled: S.journal.some(j => j.date === k), contacts: S.contacts.filter(x => x.date === k).length, roughDay: isRough(k), skillDone: !!(S.career.skill[k] && S.career.skill[k].s) }; });
+}
+views.week = () => {
+  const ws = weekStart(today()), pw = addDays(ws, -7), C = S.week.commits, cur = C[ws] || [], prev = C[pw] || [];
+  const rk = Object.keys(S.week.reviews).sort(), lastRv = rk.length ? S.week.reviews[rk[rk.length - 1]] : null;
+  const row = (c, w) => '<div class="item' + (c.done ? " done" : "") + '"><button class="chk" role="checkbox" aria-checked="' + !!c.done + '" aria-label="' + esc(c.text) + '" data-act="toggleCommit" data-id="' + c.id + '" data-w="' + w + '"></button><div class="grow">' + esc(c.text) + '</div><button class="btn ghost danger" data-act="delCommit" data-id="' + c.id + '" data-w="' + w + '">Remove</button></div>';
+  const kept = a => a.filter(c => c.done).length + " of " + a.length + " kept";
+  const outText = ai.review || (lastRv ? lastRv.text : "");
+  return demoBanner() + '<div class="head"><div><h2>Week</h2><p>Three commitments, one honest review. This is where the app holds you to your word, with your own numbers and no flattery.</p></div></div>' +
+    '<section class="panel stack"><div class="row between"><h3>This week\'s commitments</h3><span class="chip acc">' + kept(cur) + '</span></div><p class="muted small">Week of ' + fmt(ws) + '. Make each one specific and checkable, like Send 3 applications by Thursday. Three is enough.</p>' + (cur.length ? cur.map(c => row(c, ws)).join("") : '<p class="muted">None yet.</p>') +
+    (cur.length < 5 ? '<form data-form="addCommit" class="form"><label class="field">New commitment<input type="text" id="cnew" required placeholder="e.g. Publish one project on GitHub with a README"></label><button class="btn primary" type="submit">Add</button></form>' : "") +
+    '<div class="row"><button class="btn" data-act="suggestCommits"' + (ai.commitBusy ? " disabled" : "") + ">" + (ai.commitBusy ? "Thinking..." : "Suggest commitments") + "</button></div>" + (ai.commitErr ? '<p class="small" style="color:var(--bad)">' + esc(ai.commitErr) + "</p>" : "") +
+    (ai.commitSug ? ai.commitSug.map((s, i) => '<div class="item"><div class="grow">' + esc(s) + '</div><button class="btn" data-act="addCommitSug" data-i="' + i + '">Add</button></div>').join("") : "") + "</section>" +
+    (prev.length ? '<section class="panel stack"><div class="row between"><h3>Last week</h3><span class="chip">' + kept(prev) + "</span></div>" + prev.map(c => row(c, pw)).join("") + "</section>" : "") +
+    '<section class="panel stack"><h3>Weekly review</h3><p class="muted small">Claude reads your last 7 days and your commitments and tells you what worked, what slipped, and the one thing to change. It uses your own usage.</p><div class="row"><button class="btn primary" data-act="genReview"' + (ai.reviewBusy ? " disabled" : "") + ">" + (ai.reviewBusy ? "Reviewing..." : "Review my week") + "</button>" + (ai.reviewBusy ? '<button class="btn" data-act="stop">Stop</button>' : "") + "</div>" + (!ai.review && lastRv ? '<div class="label">Last review, ' + fmt(lastRv.date) + "</div>" : "") + '<div class="out" id="reviewOut">' + esc(outText) + "</div></section>";
+};
 function careerStats() { const c = S.career, f = addDays(today(), -6); const ap = c.jobs.filter(j => j.applied && j.applied >= f); return { apps: ap.length, appsB: ap.filter(j => j.plan === "B").length, reach: c.reach.filter(r => r.date >= f).length }; }
 function careerCtx() {
   const c = S.career, s = careerStats();
@@ -711,6 +894,38 @@ setInterval(() => { if (S) renderDue(); }, 30000);
 
 /* ---------- actions ---------- */
 const acts = {
+  whyLang(t) { S.why.lang = t.dataset.l; save(); render(); },
+  whyReset() { S.why.text = ""; save(); render(); },
+  logFork(t) { const v = (D.fork || "").trim(); if (!v) return; S.why.forks.unshift({ id: uid(), date: today(), text: v, way: t.dataset.way }); D.fork = ""; ai.fork = ""; save(); render(); },
+  async askFork() {
+    const v = (D.fork || "").trim(); if (!v) return;
+    ctl = new AbortController(); ai.forkBusy = true; ai.fork = "Thinking..."; render();
+    try { const r = await askText("You speak as this person's future self: the version of them who ended up where they want to be by making ordinary decisions, not through luck or talent. Be warm, candid and specific. Never shame them about the past or compare them unfavourably. Plain text, no markdown, under 160 words, with these labels on their own lines: WHAT I WOULD DO, WHAT IT COSTS, THE SMALLEST VERSION (something doable in 10 minutes), WHAT THE OLD PATTERN WILL SAY. Reply in the language the decision is written in. If the decision touches safety, health, money or legal risk, add one line recommending a qualified person. The decision: " + v.slice(0, 1200) + ". Their data: " + ctx(), { cache: false, signal: ctl.signal, onText: u => { ai.fork = u.text; const o = $("#forkOut"); if (o) o.textContent = u.text; } }); ai.fork = r.text; }
+    catch (e) { ai.fork = (e.text || "") + (e.code === "cancelled" ? "" : "\n\n" + errText(e)); }
+    ai.forkBusy = false; render();
+  },
+  roughToggle() { const k = today(); S.rough.on[k] = !S.rough.on[k]; if (!S.rough.on[k]) delete S.rough.on[k]; save(); render(); },
+  roughItem(t) { if (t.dataset.id === "skill") { acts.toggleSkill(); return; } const k = today(), l = S.rough.log[k] || (S.rough.log[k] = {}); l[t.dataset.id] = !l[t.dataset.id]; if (!l[t.dataset.id]) delete l[t.dataset.id]; save(); render(); },
+  returnWhy(t) { const n = GAP, why = t.dataset.r; S.week.dismissed = today(); GAP = 0; save(); location.hash = "#coach"; setTimeout(() => sendCoach("I was away from this app for " + n + " days. Reason: " + why + ". Reply briefly, kindly and candidly, and help me restart with the smallest next step today."), 60); },
+  dismissGap() { S.week.dismissed = today(); GAP = 0; save(); render(); },
+  toggleCommit(t) { const c = (S.week.commits[t.dataset.w] || []).find(x => x.id === t.dataset.id); if (c) { c.done = !c.done; save(); render(); } },
+  delCommit(t) { S.week.commits[t.dataset.w] = (S.week.commits[t.dataset.w] || []).filter(x => x.id !== t.dataset.id); save(); render(); },
+  addCommitSug(t) { const s = ai.commitSug[+t.dataset.i]; if (!s) return; const ws = weekStart(today()); (S.week.commits[ws] = S.week.commits[ws] || []).push({ id: uid(), text: s, done: false }); ai.commitSug.splice(+t.dataset.i, 1); save(); render(); },
+  async suggestCommits() {
+    ai.commitBusy = true; ai.commitErr = ""; render();
+    try { ai.commitSug = (await askJson("Reply with only a JSON array of 3 short strings. Each is one specific, checkable commitment for the coming week, such as Send 3 job applications by Thursday, chosen from this person's weakest areas, self-rated blind spots and goals. Plan A is a data-analysis job and plan B is a bridge job. Their data: " + ctx(), { modelTier: "default" })).filter(s => typeof s === "string" && s).slice(0, 4); }
+    catch (e) { ai.commitErr = errText(e); }
+    ai.commitBusy = false; render();
+  },
+  async genReview() {
+    const ws = weekStart(today()); ctl = new AbortController(); ai.reviewBusy = true; ai.review = "Thinking..."; render();
+    const cm = (S.week.commits[ws] || []).map(c => c.text + (c.done ? " [done]" : " [not done]"));
+    try {
+      const r = await askText("Review this person's last 7 days. Plain text only, no markdown, under 230 words, using exactly these four labels on their own lines: WHAT WORKED, WHAT SLIPPED, COMMITMENTS, ONE CHANGE FOR NEXT WEEK. Under COMMITMENTS say for each one whether it was kept and why that matters. Be candid, quote their numbers, no flattery. A rough day done at the minimum counts as a full day. If usingExampleData is true, say the numbers are examples. Daily rows: " + JSON.stringify(weekCtx()) + ". Commitments this week: " + JSON.stringify(cm) + ". Their data: " + ctx(), { cache: false, signal: ctl.signal, onText: u => { ai.review = u.text; const o = $("#reviewOut"); if (o) o.textContent = u.text; } });
+      ai.review = r.text; S.week.reviews[ws] = { date: today(), text: r.text }; save();
+    } catch (e) { ai.review = (e.text || "") + (e.code === "cancelled" ? "" : "\n\n" + errText(e)); }
+    ai.reviewBusy = false; render();
+  },
   lang(t) { S.mind.lang = t.dataset.l; save(); render(); },
   rate(t) { const r = S.mind.rate, v = +t.dataset.v; if (r[t.dataset.id] === v) delete r[t.dataset.id]; else r[t.dataset.id] = v; save(); render(); },
   toggleSkill() { const k = today(); const on = S.career.skill[k] && S.career.skill[k].s; if (on) delete S.career.skill[k]; else S.career.skill[k] = { s: true }; save(); render(); },
@@ -798,6 +1013,7 @@ async function sendCoach(q) {
 
 /* ---------- forms and inputs ---------- */
 const forms = {
+  addCommit(f) { const ws = weekStart(today()), v = $("#cnew").value.trim(); if (!v) return; (S.week.commits[ws] = S.week.commits[ws] || []).push({ id: uid(), text: v, done: false }); save(); render(); },
   addJob(f) { const st = $("#jstage").value; S.career.jobs.push({ id: uid(), company: $("#jco").value.trim(), role: $("#jrole").value.trim(), plan: $("#jplan").value, stage: st, applied: st === "saved" ? "" : today() }); save(); render(); },
   addPort(f) { S.career.portfolio.push({ id: uid(), name: $("#portname").value.trim(), done: {} }); save(); render(); },
   privStart(f) { S.career.priv = { on: true, label: $("#privname").value.trim(), start: today(), best: 0 }; save(); render(); },
@@ -824,6 +1040,8 @@ document.addEventListener("change", e => {
 S = lsGet();
 if (!S || !S.habits) S = demoState();
 S.rdone = S.rdone || {};
+GAP = S.lastOpen ? Math.max(0, diffDays(today(), S.lastOpen)) : 0;
+if (S.lastOpen !== today()) { S.lastOpen = today(); save(); }
 route();
 connectStore();
 </script>

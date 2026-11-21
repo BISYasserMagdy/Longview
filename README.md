@@ -8,8 +8,11 @@ index.html (الواجهة) + api/state.js (حفظ البيانات في Upstash
   ده بيضيف `KV_REST_API_URL` و`KV_REST_API_TOKEN` تلقائياً.
 - أو من upstash.com: أنشئ database، وانسخ REST URL وREST Token، وضيفهم في Vercel بنفس الأسماء دي (أو `UPSTASH_REDIS_REST_URL` و`UPSTASH_REDIS_REST_TOKEN`).
 
-## 2) Anthropic API key
-console.anthropic.com → API Keys. الاستهلاك بيتحاسب على حسابك.
+## 2) الـ AI (اختار واحد)
+- **مجاني:** مفتاح من Google AI Studio (aistudio.google.com) أو Groq (console.groq.com).
+  ضيف `AI_API_KEY` و`AI_BASE_URL` و`AI_MODEL` (القيم في `.env.example`). راجع أسماء الموديلات وحدود الخطة المجانية عند المزوّد، لأنها بتتغير.
+- **مدفوع:** Anthropic API: ضيف `ANTHROPIC_API_KEY` بس (وسيب `AI_API_KEY` فاضي).
+- الخطط المجانية ممكن تستخدم بياناتك في التحسين حسب شروط كل مزوّد. المذكرات شخصية، فراجع الشروط.
 
 ## 3) Vercel
 ارفع المشروع على GitHub وسوّيه Import في Vercel (أو `vercel` من الـ CLI)، وأضف Environment Variables:
@@ -17,8 +20,7 @@ console.anthropic.com → API Keys. الاستهلاك بيتحاسب على ح�
 | Name | Value |
 |---|---|
 | KV_REST_API_URL / KV_REST_API_TOKEN | من Upstash (تتضاف تلقائياً مع التكامل) |
-| ANTHROPIC_API_KEY | sk-ant-... |
-| ANTHROPIC_MODEL | claude-sonnet-5-5 (اختياري) |
+| AI_API_KEY / AI_BASE_URL / AI_MODEL | الـ AI المجاني (أو ANTHROPIC_API_KEY للمدفوع) |
 | APP_KEY | passphrase طويلة من اختيارك |
 
 اعمل Redeploy بعد إضافة المتغيرات.

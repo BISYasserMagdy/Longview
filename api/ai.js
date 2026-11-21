@@ -1,6 +1,12 @@
 import { authorized } from "../lib/auth.js";
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+// Provider is chosen by environment variables:
+//  - AI_API_KEY + AI_BASE_URL + AI_MODEL  -> any OpenAI-compatible API (Gemini, Groq, OpenRouter, ...)
+//  - otherwise ANTHROPIC_API_KEY          -> Anthropic
+const AI_KEY = process.env.AI_API_KEY;
+const AI_BASE = (process.env.AI_BASE_URL || "").replace(/\/+$/, "");
+const AI_MODEL = process.env.AI_MODEL;
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 
 function cleanMessages(input) {
   if (!Array.isArray(input) || !input.length || input.length > 40) return null;
@@ -15,49 +21,67 @@ function cleanMessages(input) {
   return out;
 }
 
+function upstream(messages, stream) {
+  if (AI_KEY) {
+    if (!AI_BASE || !AI_MODEL) return null;
+    return fetch(AI_BASE + "/chat/completions", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + AI_KEY, "content-type": "application/json" },
+      body: JSON.stringify({ model: AI_MODEL, messages, max_tokens: 3000, stream })
+    });
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1600, messages, stream })
+    });
+  }
+  return null;
+}
+
+const fullText = j => AI_KEY
+  ? (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || ""
+  : (j.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+
+function deltaText(ev) {
+  if (AI_KEY) return (ev.choices && ev.choices[0] && ev.choices[0].delta && ev.choices[0].delta.content) || "";
+  return ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta" ? ev.delta.text : "";
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ code: "method_not_allowed" }); }
   if (!authorized(req, res)) return;
-  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ code: "server_config" });
 
   const messages = cleanMessages(req.body && req.body.messages);
   if (!messages) return res.status(400).json({ code: "bad_request" });
   const stream = !!(req.body && req.body.stream);
 
-  let upstream;
+  let up;
   try {
-    upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1600, messages, stream })
-    });
+    const p = upstream(messages, stream);
+    if (!p) return res.status(500).json({ code: "server_config" });
+    up = await p;
   } catch (e) {
-    console.error("anthropic fetch failed", e);
+    console.error("ai fetch failed", e);
     return res.status(502).json({ code: "upstream" });
   }
 
-  if (!upstream.ok) {
-    console.error("anthropic error", upstream.status, await upstream.text().catch(() => ""));
-    if (upstream.status === 429) return res.status(429).json({ code: "rate_limited" });
-    if (upstream.status === 401 || upstream.status === 403) return res.status(502).json({ code: "server_config" });
+  if (!up.ok) {
+    console.error("ai provider error", up.status, await up.text().catch(() => ""));
+    if (up.status === 429) return res.status(429).json({ code: "rate_limited" });
+    if (up.status === 401 || up.status === 403) return res.status(502).json({ code: "server_config" });
     return res.status(502).json({ code: "upstream" });
   }
 
   if (!stream) {
-    const j = await upstream.json();
-    const text = (j.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-    return res.status(200).json({ text });
+    return res.status(200).json({ text: fullText(await up.json()) });
   }
 
-  // Streaming: forward only the text deltas as plain text chunks.
   res.status(200);
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
-  const reader = upstream.body.getReader();
+  const reader = up.body.getReader();
   const dec = new TextDecoder();
   let buf = "";
   try {
@@ -70,10 +94,9 @@ export default async function handler(req, res) {
         const line = buf.slice(0, i).trim();
         buf = buf.slice(i + 1);
         if (!line.startsWith("data:")) continue;
-        try {
-          const ev = JSON.parse(line.slice(5));
-          if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") res.write(ev.delta.text);
-        } catch { /* ignore keep-alives */ }
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try { const t = deltaText(JSON.parse(data)); if (t) res.write(t); } catch { /* ignore keep-alives */ }
       }
     }
   } catch (e) {

@@ -523,7 +523,7 @@ async function askJson(prompt, opts) {
   try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { throw { code: "invalid_json" }; }
 }
 function errText(e) {
-  const m = { local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The server is missing its AI key. Check the Vercel environment variables.", network: "Could not reach the server. Check your connection and try again.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped." };
+  const m = { local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The AI provider rejected the server\'s key, or it is not set. Check the AI variables in Vercel.", network: "Could not reach the server. Check your connection and try again.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped." };
   return m[e && e.code] || "Something interrupted the request. Try again.";
 }
 function ctx() {

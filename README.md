@@ -1,12 +1,12 @@
-# Longview — Vercel + MongoDB
+# Longview — Vercel + Upstash Redis
 
-index.html (الواجهة) + api/state.js (حفظ البيانات في MongoDB) + api/ai.js (الـ AI عبر Anthropic API).
+index.html (الواجهة) + api/state.js (حفظ البيانات في Upstash Redis) + api/ai.js (الـ AI عبر Anthropic API).
 مفاتيحك كلها في Environment Variables على Vercel، مش في الكود.
 
-## 1) MongoDB Atlas
-1. أنشئ cluster مجاني (M0) وuser وباسورد.
-2. Network Access → Add IP → `0.0.0.0/0` (Vercel مش عنده IP ثابت).
-3. Connect → Drivers → انسخ الـ connection string.
+## 1) التخزين: Upstash Redis (فيه خطة مجانية)
+- من Vercel: المشروع ← **Storage** ← **Upstash** (Redis) ← Create ← اختار الخطة المجانية ← Connect to project.
+  ده بيضيف `KV_REST_API_URL` و`KV_REST_API_TOKEN` تلقائياً.
+- أو من upstash.com: أنشئ database، وانسخ REST URL وREST Token، وضيفهم في Vercel بنفس الأسماء دي (أو `UPSTASH_REDIS_REST_URL` و`UPSTASH_REDIS_REST_TOKEN`).
 
 ## 2) Anthropic API key
 console.anthropic.com → API Keys. الاستهلاك بيتحاسب على حسابك.
@@ -16,8 +16,7 @@ console.anthropic.com → API Keys. الاستهلاك بيتحاسب على ح�
 
 | Name | Value |
 |---|---|
-| MONGODB_URI | connection string |
-| MONGODB_DB | longview |
+| KV_REST_API_URL / KV_REST_API_TOKEN | من Upstash (تتضاف تلقائياً مع التكامل) |
 | ANTHROPIC_API_KEY | sk-ant-... |
 | ANTHROPIC_MODEL | claude-sonnet-5-5 (اختياري) |
 | APP_KEY | passphrase طويلة من اختيارك |
@@ -26,7 +25,7 @@ console.anthropic.com → API Keys. الاستهلاك بيتحاسب على ح�
 
 ## 4) أول فتح
 الموقع بيسألك "Access key" مرة واحدة على كل جهاز، اكتب نفس `APP_KEY`.
-الـ status تحت اسم الموقع لازم يقول "Saved online". لو قال "Saved in this browser only" يبقى في مشكلة في MongoDB (راجع الـ Logs في Vercel).
+الـ status تحت اسم الموقع لازم يقول "Saved online". لو قال "Saved in this browser only" يبقى في مشكلة في التخزين (Upstash) (راجع الـ Logs في Vercel).
 
 ## تشغيل محلي
 XAMPP مش بيشغّل Node functions. استخدم:
@@ -40,4 +39,4 @@ vercel dev
 ## ملاحظات
 - أي حد يعرف `APP_KEY` يقدر يقرأ بياناتك ويستهلك رصيد الـ API، فاختار مفتاح طويل ومتشاركوش.
 - نسخة احتياطية: Me → Export as JSON، والـ Import بيرجّعها.
-- بيانات الموقع كلها في document واحد (`state` / `_id: "main"`)، يعني مستخدم واحد بس.
+- بيانات الموقع كلها في key واحد (`longview:state`)، يعني مستخدم واحد بس.

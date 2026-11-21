@@ -30,6 +30,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ code: "method_not_allowed" });
   } catch (e) {
     console.error("state error", e);
-    return res.status(500).json({ code: "server" });
+    // Behind the access key, so safe to show: tells you which MongoDB step failed.
+    return res.status(500).json({ code: "server", detail: String((e && (e.name + ": " + e.message)) || e).slice(0, 300) });
   }
 }

@@ -496,8 +496,12 @@ async function callAI(prompt, opts, stream) {
   if (LOCAL) throw { code: "local" };
   if (!appKey()) throw { code: "unauthorized" };
   let res;
-  try { res = await fetch("/api/ai", { method: "POST", headers: apiHeaders({ "content-type": "application/json" }), body: JSON.stringify({ messages: toMessages(prompt), stream: !!stream }), signal: opts.signal }); }
-  catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+  const tctl = new AbortController(); let timedOut = false;
+  const tm = setTimeout(() => { timedOut = true; tctl.abort(); }, 75000);
+  if (opts.signal) opts.signal.addEventListener("abort", () => tctl.abort());
+  try { res = await fetch("/api/ai", { method: "POST", headers: apiHeaders({ "content-type": "application/json" }), body: JSON.stringify({ messages: toMessages(prompt), stream: !!stream }), signal: tctl.signal }); }
+  catch (e) { clearTimeout(tm); throw { code: timedOut ? "timeout" : (e && e.name === "AbortError" ? "cancelled" : "network") }; }
+  clearTimeout(tm);
   if (!res.ok) {
     let j = {}; try { j = await res.json(); } catch (e) { }
     if (res.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
@@ -523,9 +527,9 @@ async function askJson(prompt, opts) {
   try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { throw { code: "invalid_json" }; }
 }
 function errText(e) {
-  const m = { local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The AI provider rejected the server\'s key, or it is not set. Check the AI variables in Vercel.", network: "Could not reach the server. Check your connection and try again.", upstream: "The AI provider returned an error.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped." };
+  const m = { local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The AI provider rejected the server\'s key, or it is not set. Check the AI variables in Vercel.", network: "Could not reach the server. Check your connection and try again.", upstream: "The AI provider returned an error.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped.", timeout: "The AI took too long to answer. Try again, or switch AI_MODEL to a faster one in Vercel.", server: "The server returned an error." };
   const base = m[e && e.code] || "Something interrupted the request. Try again.";
-  return e && e.detail ? base + " (" + (e.status || "") + " " + e.detail + ")" : base;
+  return e && e.detail ? base + " (" + (e.status || "") + " " + e.detail + ")" : (e && e.status && e.code !== "unauthorized" ? base + " (" + e.status + ")" : base);
 }
 function ctx() {
   const P = pil();

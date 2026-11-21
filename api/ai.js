@@ -64,14 +64,18 @@ export default async function handler(req, res) {
     up = await p;
   } catch (e) {
     console.error("ai fetch failed", e);
-    return res.status(502).json({ code: "upstream" });
+    return res.status(502).json({ code: "upstream", detail: String((e && e.message) || e).slice(0, 200) });
   }
 
   if (!up.ok) {
-    console.error("ai provider error", up.status, await up.text().catch(() => ""));
+    const body = await up.text().catch(() => "");
+    console.error("ai provider error", up.status, body);
+    let detail = "";
+    try { const j = JSON.parse(body); const e = Array.isArray(j) ? j[0] : j; detail = (e && e.error && (e.error.message || e.error.status)) || ""; } catch { detail = body.slice(0, 200); }
+    detail = String(detail).replace(/(key|token)[=:\s]+\S+/gi, "$1 ***").slice(0, 240);
     if (up.status === 429) return res.status(429).json({ code: "rate_limited" });
     if (up.status === 401 || up.status === 403) return res.status(502).json({ code: "server_config" });
-    return res.status(502).json({ code: "upstream" });
+    return res.status(502).json({ code: "upstream", status: up.status, detail });
   }
 
   if (!stream) {

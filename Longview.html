@@ -1,0 +1,831 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Longview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>
+/* Layout: a sidebar of working areas beside one long-horizon canvas. The Today view opens on a trajectory line that runs past "today" into a dashed projection. */
+:root {
+  --bg: #ECEFF3;
+  --surface: #F6F8FA;
+  --raised: #FFFFFF;
+  --ink: #121A22;
+  --ink2: #4B5866;
+  --line: #D2D9E1;
+  --grid: #CBD3DC;
+  --accent: #2B58D4;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DDE6FB;
+  --good: #1B8556;
+  --warn: #A8680F;
+  --bad: #BF3E37;
+  --good-soft: #DCF0E6;
+  --warn-soft: #F6E8CF;
+  --bad-soft: #F7DDDB;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1015; --surface: #121820; --raised: #19212B; --ink: #E6EBF0; --ink2: #98A5B3;
+    --line: #25303B; --grid: #2A3541; --accent: #7F9FF3; --accent-ink: #0C1015; --accent-soft: #1C2849;
+    --good: #4CC48B; --warn: #E2AB4C; --bad: #F07B73; --good-soft: #14302A; --warn-soft: #382C14; --bad-soft: #3A1F1E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1015; --surface: #121820; --raised: #19212B; --ink: #E6EBF0; --ink2: #98A5B3;
+  --line: #25303B; --grid: #2A3541; --accent: #7F9FF3; --accent-ink: #0C1015; --accent-soft: #1C2849;
+  --good: #4CC48B; --warn: #E2AB4C; --bad: #F07B73; --good-soft: #14302A; --warn-soft: #382C14; --bad-soft: #3A1F1E;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em; margin: 0; text-wrap: balance; line-height: 1.15; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink2); }
+.small { font-size: 0.84rem; }
+.label { font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink2); font-weight: 600; }
+
+.shell { display: grid; grid-template-columns: 216px minmax(0, 1fr); min-height: 100%; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); gap: 32px; max-width: 1240px; margin: 0 auto; }
+.side { padding-block: 28px; position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; gap: 24px; }
+.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand b { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: -0.02em; }
+.brand span { color: var(--ink2); font-size: 0.8rem; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav a { padding: 8px 10px; border-radius: 6px; text-decoration: none; color: var(--ink2); font-weight: 500; border: 1px solid transparent; }
+.nav a:hover { color: var(--ink); background: var(--surface); }
+.nav a[aria-current="page"] { color: var(--ink); background: var(--raised); border-color: var(--line); }
+.status { font-size: 0.78rem; color: var(--ink2); }
+main { padding-block: 28px 64px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+
+.panel { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.panel > h3 + * { margin-top: 12px; }
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.head p { color: var(--ink2); max-width: 62ch; margin-top: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+
+.btn { background: var(--raised); border: 1px solid var(--line); border-radius: 7px; padding: 7px 13px; font-weight: 500; }
+.btn:hover { border-color: var(--ink2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--ink2); padding: 4px 8px; }
+.btn.ghost:hover { color: var(--ink); background: var(--surface); }
+.btn.danger { color: var(--bad); }
+.btn[disabled] { opacity: 0.55; cursor: progress; }
+input[type=text], input[type=number], input[type=time], select, textarea { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; }
+textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.84rem; color: var(--ink2); min-width: 0; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+
+.chip { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); color: var(--ink2); white-space: nowrap; }
+.chip.good { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.chip.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.chip.acc { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+.banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--accent-soft); border: 1px solid transparent; border-radius: 10px; padding: 12px 16px; }
+.banner.due { background: var(--warn-soft); }
+
+.hero { display: grid; grid-template-columns: minmax(180px, 250px) minmax(0, 1fr); gap: 24px; align-items: center; }
+.score { font-family: var(--font-display); font-weight: 700; font-size: 5.2rem; line-height: 0.95; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.score small { font-size: 1.1rem; color: var(--ink2); font-weight: 500; letter-spacing: 0; margin-left: 4px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { font-family: var(--font-mono); font-size: 10px; fill: var(--ink2); }
+
+.pillars { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.pillar .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.pillar .bar i { display: block; height: 100%; background: var(--accent); }
+.pillar b { font-family: var(--font-mono); font-size: 1.15rem; font-weight: 500; }
+
+.item { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); min-width: 0; }
+.item:first-child { border-top: 0; }
+.item .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.item.done .grow { color: var(--ink2); text-decoration: line-through; text-decoration-color: var(--grid); }
+.item.now { background: var(--accent-soft); margin-inline: -10px; padding-inline: 10px; border-radius: 6px; border-top-color: transparent; }
+.chk { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--ink2); background: transparent; flex: none; display: grid; place-items: center; padding: 0; }
+.chk[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.chk[aria-checked="true"]::after { content: ""; width: 5px; height: 10px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.dots { display: flex; gap: 3px; }
+.dots i { width: 8px; height: 8px; border-radius: 2px; background: var(--line); }
+.dots i.on { background: var(--accent); }
+.scale { display: flex; gap: 6px; }
+.scale button { width: 36px; height: 34px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); font-family: var(--font-mono); }
+.scale button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.time { font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink2); width: 3.4rem; flex: none; }
+
+.entry { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.entry:first-child { border-top: 0; padding-top: 0; }
+.entry .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ai ul { margin: 0; padding-left: 18px; }
+.out { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.chat { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
+.bubble { max-width: 88%; padding: 10px 13px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble.me { align-self: flex-end; background: var(--accent); color: var(--accent-ink); }
+.bubble.ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); }
+
+.brain { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.brain .panel { display: flex; flex-direction: column; gap: 8px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink2); border-top: 0; }
+
+.ar { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif; line-height: 1.85; display: flex; flex-direction: column; gap: 20px; }
+.ar h2, .ar h3 { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif; letter-spacing: 0; line-height: 1.4; }
+.ar .label { letter-spacing: 0; text-transform: none; font-size: 0.8rem; }
+.typewrap { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+@media (max-width: 899px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .side { position: static; padding-block: 16px 4px; gap: 12px; }
+  .nav { flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 6px; }
+  .nav a { white-space: nowrap; }
+  main { padding-top: 16px; }
+  .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .pillars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .score { font-size: 4rem; }
+  h2 { font-size: 1.35rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><b>Longview</b><span>Plan for the person you become</span></div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <div class="status" id="status" role="status"></div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+"use strict";
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const dkey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const today = () => dkey(new Date());
+const parseKey = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return dkey(d); };
+const diffDays = (a, b) => Math.round((parseKey(a) - parseKey(b)) / 864e5);
+const fmt = k => parseKey(k).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+const uid = () => Math.random().toString(36).slice(2, 9);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+
+/* ---------- state ---------- */
+const CATS = { sleep: "Sleep", body: "Body", work: "Work", mind: "Mind", social: "People", recovery: "Recovery" };
+function demoState() {
+  const t = today();
+  let seed = 11; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const habits = [
+    { id: "h1", name: "Zone-2 walk or run, 30 minutes", kind: "build" },
+    { id: "h2", name: "90-minute deep work block", kind: "build" },
+    { id: "h3", name: "Read 20 pages", kind: "build" },
+    { id: "h4", name: "No screens in the last 45 minutes before bed", kind: "avoid" },
+    { id: "h5", name: "No doomscrolling before noon", kind: "avoid" },
+    { id: "h6", name: "Alcohol-free day", kind: "avoid" }
+  ];
+  const routine = [
+    { id: "r1", time: "07:00", label: "Wake, water, 10 minutes of daylight", cat: "body" },
+    { id: "r2", time: "08:30", label: "Plan the day: three outcomes only", cat: "mind" },
+    { id: "r3", time: "09:00", label: "Deep work block", cat: "work" },
+    { id: "r4", time: "13:00", label: "Lunch away from the screen", cat: "recovery" },
+    { id: "r5", time: "17:30", label: "Zone-2 exercise", cat: "body" },
+    { id: "r6", time: "20:00", label: "One message to a person who matters", cat: "social" },
+    { id: "r7", time: "21:30", label: "Journal: what I did, what I avoided", cat: "mind" },
+    { id: "r8", time: "23:00", label: "Screens off, lights out by 23:30", cat: "sleep" }
+  ];
+  const hlog = {}, rlog = {}, checkin = {};
+  const hp = [0.72, 0.58, 0.45, 0.35, 0.5, 0.82];
+  for (let i = 14; i >= 1; i--) {
+    const k = addDays(t, -i);
+    hlog[k] = {}; habits.forEach((h, j) => { if (rnd() < hp[j]) hlog[k][h.id] = true; });
+    rlog[k] = {}; routine.forEach(r => { if (rnd() < 0.62) rlog[k][r.id] = true; });
+    checkin[k] = { sleep: Math.round((5.6 + rnd() * 2.2) * 10) / 10, energy: 2 + Math.floor(rnd() * 3), mood: 2 + Math.floor(rnd() * 3) };
+  }
+  const j = (n, text) => ({ id: uid(), date: addDays(t, -n), text, ai: null });
+  return {
+    v: 1, demo: true, updated: 0,
+    profile: { type: "INTJ", wake: "07:00", sleep: "23:30", goals: "", strengths: "", weaknesses: "" },
+    habits, hlog, routine, rlog, checkin,
+    journal: [
+      j(1, "Finished the architecture draft. Skipped the walk because the draft felt more important. Stayed up too late and my head was foggy this morning."),
+      j(3, "Declined a dinner invite to protect focus time. Felt efficient, then a bit flat by the evening."),
+      j(6, "Good day. Walked first, then deep work. Wrote in the journal before bed. Slept well.")
+    ],
+    people: [
+      { id: "p1", name: "College friend", rel: "Friend", cadence: 21, last: addDays(t, -40), notes: "Example entry" },
+      { id: "p2", name: "Mentor", rel: "Mentor", cadence: 45, last: addDays(t, -20), notes: "Example entry" },
+      { id: "p3", name: "Sibling", rel: "Family", cadence: 7, last: addDays(t, -3), notes: "Example entry" }
+    ],
+    contacts: [
+      { id: uid(), date: addDays(t, -3), who: "p3", kind: "call", fresh: false },
+      { id: uid(), date: addDays(t, -9), who: "p2", kind: "message", fresh: false }
+    ],
+    social: { weekly: 2, newMonthly: 1 },
+    reminders: [
+      { id: "m1", time: "21:30", text: "Write tonight's journal entry" },
+      { id: "m2", time: "23:00", text: "Screens off. Lights out by 23:30" }
+    ],
+    rdone: {}
+  };
+}
+let S = null;
+let D = {};            // unsaved form drafts, kept across re-renders
+let view = "today";
+let ai = {};           // transient AI results and busy flags
+let coachTurns = [];
+const VIEWS = [["today", "Today"], ["habits", "Habits"], ["journal", "Journal"], ["routine", "Routine"], ["career", "Career"], ["people", "People"], ["brain", "Brain"], ["type", "Type"], ["coach", "Coach"], ["me", "Me"]];
+
+/* ---------- storage: private db document when signed in, localStorage as a mirror ---------- */
+const LS = "longview.v1";
+let docRef = null, saving = false, pending = false, timer = null;
+function lsGet() { try { const s = localStorage.getItem(LS); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function lsSet() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { } }
+function setStatus(t) { const el = $("#status"); if (el) el.textContent = t; }
+function save() { S.updated = Date.now(); lsSet(); clearTimeout(timer); timer = setTimeout(flush, 700); }
+async function flush() {
+  if (!docRef) { setStatus("Saved in this browser"); return; }
+  if (saving) { pending = true; return; }
+  saving = true;
+  try { await docRef.set({ state: JSON.stringify(S), updated: S.updated }); setStatus("Saved to your account"); }
+  catch (e) { setStatus(e && e.code === "quota_exceeded" ? "Storage is full. Export your data from Me." : "Saved in this browser only"); }
+  saving = false;
+  if (pending) { pending = false; flush(); }
+}
+async function connectStore() {
+  try {
+    const c = window.claude; if (!c) { setStatus("Saved in this browser"); return; }
+    const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
+    if (!db || !user) { setStatus("Saved in this browser"); return; }
+    const id = await user.id();
+    if (!id) { setStatus("Saved in this browser"); return; }
+    docRef = db.doc("data/users/" + id + "/main");
+    const snap = await docRef.get();
+    if (snap.exists) {
+      const remote = JSON.parse(snap.data().state);
+      if ((remote.updated || 0) >= (S.updated || 0)) { S = remote; lsSet(); render(); }
+      else flush();
+    } else flush();
+    setStatus("Saved to your account");
+  } catch (e) { setStatus("Saved in this browser"); }
+}
+
+/* ---------- scoring ---------- */
+const W = { routine: 25, habits: 25, sleep: 25, mind: 10, connect: 15 };
+const PNAME = { routine: "Routine", habits: "Habits", sleep: "Sleep", mind: "Mind", connect: "Connection" };
+const sleepScore = h => h >= 7 && h <= 9 ? 100 : h < 7 ? Math.max(0, 100 - (7 - h) * 28) : Math.max(0, 100 - (h - 9) * 28);
+function firstTracked() {
+  const ks = [...Object.keys(S.hlog), ...Object.keys(S.rlog), ...Object.keys(S.checkin), ...S.journal.map(j => j.date)];
+  const nonEmpty = ks.filter(k => (S.hlog[k] && Object.keys(S.hlog[k]).length) || (S.rlog[k] && Object.keys(S.rlog[k]).length) || S.checkin[k] || S.journal.some(j => j.date === k));
+  return nonEmpty.length ? nonEmpty.sort()[0] : null;
+}
+function dayP(k) {
+  const p = {};
+  const rs = S.routine, hs = S.habits;
+  p.routine = rs.length ? rs.filter(r => (S.rlog[k] || {})[r.id]).length / rs.length * 100 : null;
+  p.habits = hs.length ? hs.filter(h => (S.hlog[k] || {})[h.id]).length / hs.length * 100 : null;
+  const c = S.checkin[k];
+  p.sleep = c && c.sleep !== "" && c.sleep != null ? sleepScore(+c.sleep) : null;
+  const j = S.journal.some(x => x.date === k) ? 1 : 0;
+  p.mind = c && c.mood ? (j * 0.5 + c.mood / 5 * 0.5) * 100 : j * 100;
+  let n = 0; for (let i = 0; i < 7; i++) { const dd = addDays(k, -i); n += S.contacts.filter(x => x.date === dd).length; }
+  p.connect = Math.min(1, n / (S.social.weekly || 2)) * 100;
+  return p;
+}
+function dayScore(k) {
+  const p = dayP(k); let s = 0, w = 0;
+  for (const key in W) if (p[key] != null) { s += p[key] * W[key]; w += W[key]; }
+  return w ? s / w : null;
+}
+function windowDays(n = 14) {
+  const f = firstTracked(); if (!f) return [];
+  const out = [];
+  for (let i = n; i >= 1; i--) { const k = addDays(today(), -i); if (k >= f) out.push(k); }
+  return out;
+}
+function pil() {
+  const days = windowDays(); if (!days.length) return null;
+  const agg = {}; for (const key in W) { const v = days.map(k => dayP(k)[key]).filter(x => x != null); agg[key] = v.length ? mean(v) : null; }
+  let s = 0, w = 0; for (const key in W) if (agg[key] != null) { s += agg[key] * W[key]; w += W[key]; }
+  return { p: agg, overall: w ? s / w : null, days };
+}
+function levelOf(x) { return x == null ? ["No data yet", "Log a day to start"] : x < 40 ? ["Drifting", "Most days are running on defaults."] : x < 60 ? ["Building", "The structure exists but is not holding yet."] : x < 80 ? ["Steady", "Your routine is working more days than not."] : ["Locked in", "You are executing the plan you wrote."]; }
+function series() {
+  const P = pil(); if (!P) return null;
+  const all = []; for (let i = 14; i >= 1; i--) { const k = addDays(today(), -i); all.push({ k, v: k >= firstTracked() ? dayScore(k) : null }); }
+  const pts = all.map((o, i) => ({ i, v: o.v })).filter(o => o.v != null);
+  let slope = 0;
+  if (pts.length >= 4) {
+    const mx = mean(pts.map(o => o.i)), my = mean(pts.map(o => o.v));
+    let nu = 0, de = 0; pts.forEach(o => { nu += (o.i - mx) * (o.v - my); de += (o.i - mx) ** 2; });
+    slope = de ? clamp(nu / de, -2.5, 2.5) : 0;
+  }
+  const base = mean(pts.slice(-4).map(o => o.v));
+  const proj = []; for (let s = 1; s <= 14; s++) proj.push(clamp(base + slope * s, 0, 100));
+  return { all, proj, slope, base, end: proj[13] };
+}
+function trajectory() {
+  const sr = series(); if (!sr) return "";
+  const W2 = 640, H = 190, L = 30, R = 14, T = 12, B = 26;
+  const x = i => L + (i / 27) * (W2 - L - R);
+  const y = v => T + (1 - v / 100) * (H - T - B);
+  let s = '<svg class="chart" viewBox="0 0 ' + W2 + " " + H + '" role="img" aria-label="Daily score for the last 14 days and the projection for the next 14">';
+  [0, 50, 100].forEach(g => { s += '<line x1="' + L + '" x2="' + (W2 - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--grid)" stroke-width="1"' + (g === 50 ? ' stroke-dasharray="2 4"' : "") + "/>"; s += '<text x="' + (L - 6) + '" y="' + (y(g) + 3) + '" text-anchor="end">' + g + "</text>"; });
+  s += '<line x1="' + x(13.5) + '" x2="' + x(13.5) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--grid)" stroke-width="1"/>';
+  let d = "", started = false;
+  sr.all.forEach((o, i) => { if (o.v == null) return; d += (started ? "L" : "M") + x(i).toFixed(1) + " " + y(o.v).toFixed(1) + " "; started = true; });
+  s += '<path d="' + d + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+  const last = sr.all.map((o, i) => ({ o, i })).filter(z => z.o.v != null).pop();
+  let pd = "M" + x(last.i).toFixed(1) + " " + y(last.o.v).toFixed(1) + " L" + x(14).toFixed(1) + " " + y(sr.base).toFixed(1);
+  sr.proj.forEach((v, j) => { pd += " L" + x(15 + j).toFixed(1) + " " + y(v).toFixed(1); });
+  s += '<path d="' + pd + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 5" opacity="0.8"/>';
+  s += '<circle cx="' + x(27) + '" cy="' + y(sr.end) + '" r="4" fill="var(--accent)"/>';
+  s += '<text x="' + (x(27) - 8) + '" y="' + (y(sr.end) + (sr.end > 80 ? 16 : -9)) + '" text-anchor="end" style="fill:var(--ink)">' + Math.round(sr.end) + "</text>";
+  s += '<text x="' + L + '" y="' + (H - 6) + '">14 days ago</text><text x="' + x(13.5) + '" y="' + (H - 6) + '" text-anchor="middle">today</text><text x="' + (W2 - R) + '" y="' + (H - 6) + '" text-anchor="end">in 14 days</text>';
+  return s + "</svg>";
+}
+function avgSleep() { const v = windowDays().map(k => S.checkin[k] && S.checkin[k].sleep !== "" ? +S.checkin[k].sleep : null).filter(x => x != null && !isNaN(x)); return v.length ? mean(v) : null; }
+function habitRate(h) { const days = windowDays(); return days.length ? days.filter(k => (S.hlog[k] || {})[h.id]).length / days.length : null; }
+function streak(arr, key) { let n = 0, k = today(); if (!(arr[k] && arr[k][key])) k = addDays(k, -1); while (arr[k] && arr[k][key]) { n++; k = addDays(k, -1); } return n; }
+function contactsIn(days) { const from = addDays(today(), -days + 1); return S.contacts.filter(c => c.date >= from); }
+function projections() {
+  const days = windowDays(); if (days.length < 3) return null;
+  const n = days.length, f = 90 / n;
+  const hdone = days.reduce((s, k) => s + S.habits.filter(h => (S.hlog[k] || {})[h.id]).length, 0);
+  const hmiss = days.reduce((s, k) => s + S.habits.filter(h => !(S.hlog[k] || {})[h.id]).length, 0);
+  const sl = days.map(k => S.checkin[k] && S.checkin[k].sleep !== "" ? +S.checkin[k].sleep : null).filter(x => x != null);
+  const short = sl.length ? sl.filter(x => x < 7).length / sl.length * 90 : null;
+  const jr = days.filter(k => S.journal.some(j => j.date === k)).length;
+  const ct = S.contacts.filter(c => days.includes(c.date)).length;
+  const rk = days.reduce((s, k) => s + S.routine.filter(r => (S.rlog[k] || {})[r.id]).length, 0);
+  return [
+    ["Habit check-offs", Math.round(hdone * f), "of " + Math.round((hdone + hmiss) * f) + " possible"],
+    ["Routine blocks kept", Math.round(rk * f), "of " + Math.round(days.length * S.routine.length * f) + " planned"],
+    ["Nights under 7 hours", short == null ? null : Math.round(short), "of 90"],
+    ["Journal entries", Math.round(jr * f), "of 90 days"],
+    ["People you reach", Math.round(ct * f), "contacts logged"]
+  ];
+}
+function moves() {
+  const P = pil();
+  if (!P) return [["Start with one honest day", "Tick what you did, log last night's sleep and write two lines in the journal. The outlook needs a few days of real data before it means anything."]];
+  const order = Object.keys(P.p).filter(k => P.p[k] != null).sort((a, b) => P.p[a] - P.p[b]).slice(0, 3);
+  const A = {
+    sleep: () => ["Fix lights-out first", "Your sleep averages " + (avgSleep() || 0).toFixed(1) + " hours. Every other habit depends on it, and it is the cheapest lever on memory, mood and next-day discipline."],
+    routine: () => ["Shrink the routine until you keep it", "You kept " + Math.round(P.p.routine) + "% of your routine blocks. Cut it to the five blocks you can hit nine days in ten, then add back one at a time."],
+    habits: () => ["Anchor your weakest habit", "Habit completion is " + Math.round(P.p.habits) + "%. Pick the habit you miss most and attach it to something you never skip, like the first coffee or closing the laptop."],
+    mind: () => ["Close the loop each evening", "Two lines in the journal is enough. The point is data: without it the outlook is guessing."],
+    connect: () => ["Treat people as infrastructure", "You logged " + contactsIn(14).length + " contacts in 14 days against a goal of " + (S.social.weekly * 2) + ". Send one low-effort message today."]
+  };
+  return order.map(k => A[k]());
+}
+
+/* ---------- AI ---------- */
+let sampleFn;
+async function getSample() { if (sampleFn !== undefined) return sampleFn; try { sampleFn = (window.claude && await window.claude.use("sample")) || null; } catch (e) { sampleFn = null; } return sampleFn; }
+async function askText(prompt, opts) { const s = await getSample(); if (!s) throw { code: "none" }; return s(prompt, opts); }
+async function askJson(prompt, opts) { const s = await getSample(); if (!s || !s.json) throw { code: "none" }; return s.json(prompt, opts); }
+function errText(e) {
+  const m = { none: "AI is not available in this view. Open the page from claude.ai to use it.", not_granted: "AI access was declined for this page. Reload to be asked again.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped.", sampling_disabled: "AI is turned off for this account." };
+  return m[e && e.code] || "Something interrupted the request. Try again.";
+}
+function ctx() {
+  const P = pil();
+  return JSON.stringify({
+    identity: S.profile.type, wake: S.profile.wake, bedtime: S.profile.sleep, goals: S.profile.goals, strengths: S.profile.strengths, weaknesses: S.profile.weaknesses,
+    last14days: P ? { overall: Math.round(P.overall), pillars: Object.fromEntries(Object.entries(P.p).map(([k, v]) => [PNAME[k], v == null ? null : Math.round(v)])), avgSleepHours: avgSleep() ? +avgSleep().toFixed(1) : null } : null,
+    habits: S.habits.map(h => ({ name: h.name, kind: h.kind, doneRate: habitRate(h) == null ? null : Math.round(habitRate(h) * 100) + "%" })),
+    routine: S.routine.map(r => r.time + " " + r.label),
+    recentJournal: S.journal.slice(0, 3).map(j => ({ date: j.date, text: j.text.slice(0, 500) })),
+    people: S.people.map(p => ({ rel: p.rel, daysSinceContact: p.last ? diffDays(today(), p.last) : null, wantedEveryDays: p.cadence })),
+    contactsLast14Days: contactsIn(14).length, weeklyContactGoal: S.social.weekly,
+    usingExampleData: S.demo, career: S.career ? careerCtx() : null, selfRatedBlindSpots: typeFocus()
+  });
+}
+const COACH_RULES = "You are Longview, a candid long-horizon coach inside a personal planning app. The user identifies as an INTJ and wants a better future by building on strengths and fixing weaknesses. Rules: be direct and specific, never flattering; use their numbers; reason in terms of strategy and compounding, without stereotyping; brain and health statements must match mainstream evidence and say so when evidence is only associational; no diagnoses; you are not a doctor. If they mention wanting to harm themselves, say so plainly and urge them to contact local emergency services or a crisis line. Plain text only, no markdown, short paragraphs. If usingExampleData is true, say the numbers are examples. Their data: ";
+
+/* ---------- views ---------- */
+const todayLog = () => S.hlog[today()] || (S.hlog[today()] = {});
+const todayR = () => S.rlog[today()] || (S.rlog[today()] = {});
+const ci = () => S.checkin[today()] || (S.checkin[today()] = { sleep: "", energy: 0, mood: 0 });
+function chk(on, act, id, label) { return '<button class="chk" role="checkbox" aria-checked="' + on + '" aria-label="' + esc(label) + '" data-act="' + act + '" data-id="' + id + '"></button>'; }
+function pillarsHtml() {
+  const P = pil(); if (!P) return "";
+  return '<div class="pillars">' + Object.keys(W).map(k => '<div class="pillar"><div class="label">' + PNAME[k] + '</div><b>' + (P.p[k] == null ? "–" : Math.round(P.p[k])) + '</b><div class="bar"><i style="width:' + (P.p[k] || 0) + '%"></i></div></div>').join("") + "</div>";
+}
+function demoBanner() {
+  return S.demo ? '<div class="banner"><span>You are looking at <b>example data</b> so the outlook has something to show. Clear it and everything starts from your own logs.</span><button class="btn primary" data-act="clearDemo">Clear examples</button></div>' : "";
+}
+const views = {};
+views.today = () => {
+  const P = pil(), sr = series(), L = levelOf(P && P.overall), c = ci(), t = today();
+  const trend = sr ? (Math.abs(sr.slope) < 0.3 ? "holding flat" : sr.slope > 0 ? "climbing about " + sr.slope.toFixed(1) + " points a day" : "slipping about " + Math.abs(sr.slope).toFixed(1) + " points a day") : "";
+  const pj = projections();
+  const nextR = S.routine.filter(r => !(todayR()[r.id])).find(r => r.time >= nowHM());
+  return demoBanner() +
+    '<div class="head"><div><h2>' + new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + '</h2></div></div>' +
+    '<section class="panel"><div class="hero"><div class="stack" style="gap:8px"><div class="label">Outlook score, last 14 days</div><div class="score">' + (P ? Math.round(P.overall) : "–") + '<small>/ 100</small></div><div><b>' + L[0] + '</b><div class="muted small">' + L[1] + '</div></div></div>' +
+    '<div class="stack" style="gap:8px">' + (sr ? trajectory() + '<p class="small muted">Dashed line: where the last 14 days point if nothing changes. Your score is ' + trend + '. It is a projection from your own logs, not a medical prediction.</p>' : '<p class="muted">Log today to start the line.</p>') + '</div></div></section>' +
+    '<section class="panel"><h3>What moves your score</h3>' + pillarsHtml() + "</section>" +
+    '<div class="grid2"><section class="panel stack"><h3>Check-in</h3>' +
+    '<label class="field">Hours slept last night<input type="number" id="sleepIn" min="0" max="14" step="0.5" value="' + esc(c.sleep) + '" data-ci="sleep"></label>' +
+    '<div><div class="label" style="margin-bottom:6px">Energy</div><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ciSet" data-f="energy" data-v="' + n + '" aria-pressed="' + (c.energy === n) + '" aria-label="Energy ' + n + '">' + n + "</button>").join("") + '</div></div>' +
+    '<div><div class="label" style="margin-bottom:6px">Mood</div><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ciSet" data-f="mood" data-v="' + n + '" aria-pressed="' + (c.mood === n) + '" aria-label="Mood ' + n + '">' + n + "</button>").join("") + '</div></div></section>' +
+    '<section class="panel"><h3>Habits today</h3>' + (S.habits.length ? S.habits.map(h => { const on = !!todayLog()[h.id]; return '<div class="item' + (on ? " done" : "") + '">' + chk(on, "toggleHabit", h.id, h.name) + '<div class="grow">' + esc(h.name) + '</div><span class="chip ' + (h.kind === "avoid" ? "warn" : "acc") + '">' + (h.kind === "avoid" ? "avoid" : "build") + '</span><span class="mono small muted" title="Current streak">' + streak(S.hlog, h.id) + "d</span></div>"; }).join("") : '<p class="muted">No habits yet. Add some in Habits.</p>') + "</section></div>" +
+    '<div class="grid2"><section class="panel"><h3>Routine today</h3>' + (S.routine.length ? [...S.routine].sort((a, b) => a.time.localeCompare(b.time)).map(r => { const on = !!todayR()[r.id]; return '<div class="item' + (on ? " done" : "") + (nextR && nextR.id === r.id ? " now" : "") + '">' + chk(on, "toggleRoutine", r.id, r.label) + '<span class="time">' + esc(r.time) + '</span><div class="grow">' + esc(r.label) + "</div>" + (nextR && nextR.id === r.id ? '<span class="chip acc">next</span>' : "") + "</div>"; }).join("") : '<p class="muted">No routine yet. Let Longview build one in Routine.</p>') + "</section>" +
+    '<section class="panel stack"><h3>Next moves</h3>' + moves().map(m => '<div><b>' + esc(m[0]) + '</b><p class="muted">' + esc(m[1]) + "</p></div>").join("") +
+    (pj ? '<div><div class="label" style="margin:6px 0">If the next 90 days look like your last ' + P.days.length + '</div>' + pj.map(r => '<div class="row between small" style="padding:3px 0"><span>' + r[0] + '</span><span class="mono">' + (r[1] == null ? "–" : r[1]) + ' <span class="muted">' + r[2] + "</span></span></div>").join("") + "</div>" : "") + "</section></div>" +
+    '<section class="panel stack"><h3>Ask the strategist</h3><p class="muted small">Claude reads your last 14 days and tells you where this is heading and what to change. It uses your own usage.</p><div class="row"><button class="btn primary" data-act="readOutlook"' + (ai.outlookBusy ? " disabled" : "") + ">" + (ai.outlookBusy ? "Reading..." : "Read my outlook") + '</button>' + (ai.outlookBusy ? '<button class="btn" data-act="stop">Stop</button>' : "") + '</div><div class="out" id="outlookOut">' + esc(ai.outlook || "") + "</div></section>";
+};
+views.habits = () => {
+  const days = lastDays(14);
+  return demoBanner() + '<div class="head"><div><h2>Habits</h2><p>Build habits move you forward. Avoid habits protect what you already have, so a tick means you stayed clear of it today.</p></div></div>' +
+    '<section class="panel"><h3>Your habits</h3>' + (S.habits.length ? '<div class="tablewrap"><table><thead><tr><th>Habit</th><th>Type</th><th>Streak</th><th>Last 14 days</th><th>Rate</th><th></th></tr></thead><tbody>' + S.habits.map(h => { const r = habitRate(h); return "<tr><td>" + esc(h.name) + '</td><td><span class="chip ' + (h.kind === "avoid" ? "warn" : "acc") + '">' + h.kind + '</span></td><td class="mono">' + streak(S.hlog, h.id) + 'd</td><td><div class="dots">' + days.map(k => '<i class="' + ((S.hlog[k] || {})[h.id] ? "on" : "") + '" title="' + fmt(k) + '"></i>').join("") + '</div></td><td class="mono">' + (r == null ? "–" : Math.round(r * 100) + "%") + '</td><td><button class="btn ghost danger" data-act="delHabit" data-id="' + h.id + '" aria-label="Delete ' + esc(h.name) + '">Remove</button></td></tr>'; }).join("") + "</tbody></table></div>" : '<p class="muted">Nothing here yet.</p>') + "</section>" +
+    '<section class="panel"><h3>Add a habit</h3><form data-form="addHabit" class="form"><label class="field">Habit<input type="text" id="hname" placeholder="e.g. Write for 30 minutes" required></label><label class="field">Type<select id="hkind"><option value="build">Build</option><option value="avoid">Avoid</option></select></label><button class="btn primary" type="submit">Add</button></form></section>' +
+    '<section class="panel stack"><h3>Habits for your weaknesses</h3><p class="muted small">Claude proposes habits based on your profile and what your logs show you skip.</p><div class="row"><button class="btn primary" data-act="genHabits"' + (ai.habitsBusy ? " disabled" : "") + ">" + (ai.habitsBusy ? "Thinking..." : "Suggest habits") + "</button></div>" + (ai.habitsErr ? '<p class="small" style="color:var(--bad)">' + esc(ai.habitsErr) + "</p>" : "") +
+    (ai.habits ? ai.habits.map((h, i) => '<div class="item"><div class="grow"><b>' + esc(h.name) + '</b> <span class="chip ' + (h.kind === "avoid" ? "warn" : "acc") + '">' + esc(h.kind) + '</span><div class="muted small">' + esc(h.why) + '</div></div><button class="btn" data-act="addSuggested" data-i="' + i + '">Add</button></div>').join("") : "") + "</section>";
+};
+function lastDays(n) { return Array.from({ length: n }, (_, i) => addDays(today(), i - (n - 1))); }
+views.journal = () => {
+  return demoBanner() + '<div class="head"><div><h2>Journal</h2><p>Write what you did and what you avoided. Longview reads the pattern across entries and says what it will cost or earn you if it continues.</p></div></div>' +
+    '<section class="panel stack"><h3>Today</h3><label class="field">Entry<textarea id="jtext" data-draft="journal" placeholder="What did I do today? What drained me? What did I avoid that I should have faced? What will I do differently tomorrow?">' + esc(D.journal || "") + '</textarea></label><div class="row"><button class="btn primary" data-act="saveJournal">Save entry</button></div></section>' +
+    '<section class="panel">' + (S.journal.length ? S.journal.map(j => '<div class="entry"><div class="row between"><b>' + fmt(j.date) + '</b><span class="row"><button class="btn" data-act="reflect" data-id="' + j.id + '"' + (ai["j" + j.id] ? " disabled" : "") + ">" + (ai["j" + j.id] ? "Reading..." : (j.ai ? "Reflect again" : "Reflect")) + '</button><button class="btn ghost danger" data-act="delJournal" data-id="' + j.id + '">Delete</button></span></div><div class="text">' + esc(j.text) + "</div>" + (ai["je" + j.id] ? '<p class="small" style="color:var(--bad)">' + esc(ai["je" + j.id]) + "</p>" : "") + (j.ai ? aiBlock(j.ai) : "") + "</div>").join("") : '<p class="muted">No entries yet.</p>') + "</section>";
+};
+function aiBlock(a) {
+  const li = arr => "<ul>" + (arr || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+  return '<div class="ai"><div><span class="label">Pattern</span><p>' + esc(a.pattern) + '</p></div><div><span class="label">Do next</span>' + li(a.do) + '</div><div><span class="label">Avoid</span>' + li(a.avoid) + '</div><div><span class="label">If this repeats for 90 days</span><p>' + esc(a.outcome) + "</p></div></div>";
+}
+views.routine = () => {
+  const P = pil();
+  const sorted = [...S.routine].sort((a, b) => a.time.localeCompare(b.time));
+  return demoBanner() + '<div class="head"><div><h2>Routine</h2><p>A routine is a bet that tomorrow you will not have to decide. Keep it short enough to hit nine days in ten.</p></div>' + (P ? '<div><div class="label">Kept, last 14 days</div><b class="mono" style="font-size:1.6rem">' + (P.p.routine == null ? "–" : Math.round(P.p.routine) + "%") + "</b></div>" : "") + "</div>" +
+    '<section class="panel stack"><h3>Build me a routine</h3><p class="muted small">Tell Longview your constraints. It drafts a day you can preview before it replaces anything.</p><div class="form"><label class="field">Wake<input type="time" id="rwake" data-draft="rwake" value="' + esc(D.rwake || S.profile.wake) + '"></label><label class="field">Bed<input type="time" id="rbed" data-draft="rbed" value="' + esc(D.rbed || S.profile.sleep) + '"></label></div><label class="field">Fixed commitments, energy pattern, what you want from the day<textarea id="rnotes" data-draft="rnotes" style="min-height:84px" placeholder="e.g. Work 10:00 to 18:00 on weekdays. Best focus before noon. I want to study two hours a day and stop scrolling at night.">' + esc(D.rnotes || "") + '</textarea></label><div class="row"><button class="btn primary" data-act="genRoutine"' + (ai.routineBusy ? " disabled" : "") + ">" + (ai.routineBusy ? "Drafting..." : "Draft my routine") + "</button></div>" + (ai.routineErr ? '<p class="small" style="color:var(--bad)">' + esc(ai.routineErr) + "</p>" : "") +
+    (ai.routine ? '<div class="ai"><div class="label">Draft</div>' + ai.routine.map(r => '<div class="row small"><span class="time">' + esc(r.time) + "</span><span>" + esc(r.label) + '</span><span class="chip">' + esc(CATS[r.cat] || r.cat) + "</span></div>").join("") + '<div class="row"><button class="btn primary" data-act="applyRoutine" data-mode="replace">Replace my routine</button><button class="btn" data-act="applyRoutine" data-mode="add">Add to my routine</button></div></div>' : "") + "</section>" +
+    '<section class="panel"><h3>Your routine</h3>' + (sorted.length ? sorted.map(r => '<div class="item"><span class="time">' + esc(r.time) + '</span><div class="grow">' + esc(r.label) + '</div><span class="chip">' + esc(CATS[r.cat] || r.cat) + '</span><button class="btn ghost danger" data-act="delRoutine" data-id="' + r.id + '" aria-label="Remove ' + esc(r.label) + '">Remove</button></div>').join("") : '<p class="muted">Empty. Draft one above or add blocks below.</p>') + "</section>" +
+    '<section class="panel"><h3>Add a block</h3><form data-form="addRoutine" class="form"><label class="field">Time<input type="time" id="rtime" required></label><label class="field">What<input type="text" id="rlabel" placeholder="e.g. Read, no phone" required></label><label class="field">Area<select id="rcat">' + Object.entries(CATS).map(([k, v]) => '<option value="' + k + '">' + v + "</option>").join("") + '</select></label><button class="btn primary" type="submit">Add</button></form></section>' +
+    '<section class="panel stack"><h3>Reminders</h3><p class="muted small">Reminders appear at the top of this page while it is open. They cannot buzz your phone when the page is closed.</p>' + (S.reminders.length ? [...S.reminders].sort((a, b) => a.time.localeCompare(b.time)).map(m => '<div class="item"><span class="time">' + esc(m.time) + '</span><div class="grow">' + esc(m.text) + '</div><button class="btn ghost danger" data-act="delReminder" data-id="' + m.id + '">Remove</button></div>').join("") : '<p class="muted">No reminders.</p>') + '<form data-form="addReminder" class="form"><label class="field">Time<input type="time" id="mtime" required></label><label class="field">Reminder<input type="text" id="mtext" required placeholder="e.g. Message Mentor"></label><button class="btn primary" type="submit">Add</button></form></section>';
+};
+const TYPE = {
+  en: {
+    title: "Type", intro: "A map of how your mind tends to work, what it does well, and where it tends to fail you. Read it as a mirror, then rate what actually fits you.",
+    note: "MBTI and the cognitive-function model are a reflection tool, not established science: type tests have weak reliability and the model is not validated. Use it to ask better questions about yourself, not as a verdict. Being an INTJ describes a preference. It is not a reason you cannot have friends or feel things.",
+    stackH: "The four main positions", shadowH: "The four shadow positions",
+    stackIntro: "Each type has eight cognitive functions in a fixed order. For INTJ the order is Ni, Te, Fi, Se, then Ne, Ti, Fe, Si. The first four are the ones you use consciously. Their strength and maturity fall in that order: Hero, Parent, Child, Inferior.",
+    stack: [
+      { pos: "Hero", fn: "Ni", name: "Introverted Intuition", text: "Your home base and strongest function. It quietly links patterns and sees where things are heading, so you often know the likely outcome before you can explain why. It feels effortless. The risk is trusting it too much and never testing it against reality." },
+      { pos: "Parent", fn: "Te", name: "Extraverted Thinking", text: "The helper that turns the Hero's vision into plans, systems and results. It organizes, sets targets, measures and cuts waste. It is mature and dependable. Under stress it turns bossy or cold." },
+      { pos: "Child", fn: "Fi", name: "Introverted Feeling", text: "Your inner value system, still young and sensitive. It knows what matters to you but struggles to put feelings into words, and can make you touchy or moody. It matures slowly with attention. Play and creativity live here." },
+      { pos: "Inferior", fn: "Se", name: "Extraverted Sensing", text: "Your weakest function: the body, the present moment, the senses and action in the physical world. It feels awkward and draining. Under stress it takes over in unhealthy ways, such as binge scrolling, comfort eating, impulsive spending and other sensory escapes. Training it with exercise, walking outside, cooking or sport is the shortest route to feeling better." }
+    ],
+    shadowIntro: "The shadow functions sit in the unconscious. They stay quiet when you are well and show up under stress, in conflict or when you feel cornered. They are mirror images of the first four, and you can work with them once you notice them.",
+    shadow: [
+      { pos: "Opposing Personality", fn: "Ne", name: "Extraverted Intuition", text: "Defends the Hero by resisting. It shows up as pessimistic what-if scenarios where everything collapses, and as rejecting other people's ideas before hearing them." },
+      { pos: "Critical Parent", fn: "Ti", name: "Introverted Thinking", text: "A harsh inner judge. It nitpicks logic and holds you and others to impossible standards, which feeds perfectionism and self-criticism." },
+      { pos: "Trickster", fn: "Fe", name: "Extraverted Feeling", text: "Slippery and awkward. You misread what a group feels, say things that land wrong, or try hard to please and then pull away. Social harmony feels like a puzzle you never solve." },
+      { pos: "Demon", fn: "Si", name: "Introverted Sensing", text: "Your deepest weak point. Under severe stress it replays past failures and physical discomfort on a loop and clings to rigid, familiar routines. It is the source of I always fail and of feeling stuck in old memories." }
+    ],
+    strH: "Strengths",
+    strNote: "These are tendencies of the type. Keep the ones that match you.",
+    str: [
+      ["Long-range vision", "You see where things are heading and can plan years ahead."],
+      ["Independent thinking", "You question assumptions and do not need a crowd to agree before you act."],
+      ["Systems and efficiency", "You turn ideas into structures that work and cut waste."],
+      ["Self-directed learning", "You can teach yourself hard things as long as you see the point."],
+      ["High standards", "You care about quality and finish what you commit to."],
+      ["Calm with logical problems", "Emotion rarely stops you from solving a technical problem."]
+    ],
+    weakH: "Blind spots to work on", rateQ: "How true is this for me?", rateKey: "1 means not me, 5 means very me.", inApp: "In Longview:",
+    weak: [
+      { id: "w1", t: "Seeing little value in people", text: "Weak social intuition (the Trickster Fe) makes relationships feel costly with no visible return, so you drift. Isolation is a real health risk and it narrows your opportunities.", fix: "People tab: set a cadence for three to five people and send one message a week." },
+      { id: "w2", t: "Planning forever, starting late", text: "Ni wants the perfect plan before moving. Waiting feels productive but it is avoidance.", fix: "Career tab: use the 30-minute rule and ship the imperfect version." },
+      { id: "w3", t: "Ignoring the body and the present", text: "An inferior Se treats sleep, food and exercise as optional until you crash.", fix: "Routine and Brain tabs: fixed lights-out, a daily walk, morning daylight." },
+      { id: "w4", t: "Numbness, or feelings left unnamed", text: "The Child Fi is immature, so feelings go unnamed and show up as flatness, irritation or lost drive.", fix: "Journal: add one line each night. What did I feel today, and why?" },
+      { id: "w5", t: "Perfectionism and harsh self-talk", text: "The Critical Parent (Ti) judges every attempt as not good enough, so you stop attempting.", fix: "Define good enough before you start. Count finished attempts, not perfect ones." },
+      { id: "w6", t: "All-or-nothing hopelessness", text: "When the long plan looks blocked, Ni and the Opposing Ne predict failure and hope drops fast.", fix: "Shrink the horizon to this week. Track the weekly quota, not the final result." },
+      { id: "w7", t: "Not asking for help", text: "Self-reliance turns into a trap: you carry problems alone and look strong while stalling.", fix: "Each week message one person with a specific question: a mentor, an alumnus, a doctor." }
+    ],
+    focusH: "Your focus areas", focusEmpty: "Rate the blind spots above and your top three appear here. The coach will use them too."
+  },
+  ar: {
+    title: "النمط", intro: "خريطة لطريقة عمل عقلك: ما يجيده وأين يخذلك. اقرأها كمرآة، ثم قيّم ما يناسبك فعلًا.",
+    note: "نموذج MBTI ووظائف الإدراك أداة للتأمل وليست علمًا مثبتًا: اختبارات النمط ضعيفة الثبات والنموذج لم يُتحقق منه علميًا. استخدمه لتطرح على نفسك أسئلة أفضل، لا كحكم نهائي. كونك INTJ يصف ميلًا، ولا يعني أنك عاجز عن تكوين صداقات أو عن الشعور.",
+    stackH: "المواقع الأربعة الأساسية", shadowH: "مواقع الظل الأربعة",
+    stackIntro: "لكل نمط ثماني وظائف إدراكية بترتيب ثابت. عند INTJ الترتيب: Ni ثم Te ثم Fi ثم Se، وبعدها Ne ثم Ti ثم Fe ثم Si. الأربع الأولى هي التي تستخدمها بوعي، وتتناقص قوتها ونضجها بهذا الترتيب: البطل، الأب، الطفل، الأدنى.",
+    stack: [
+      { pos: "البطل (Hero)", fn: "Ni", name: "الحدس الداخلي", text: "وظيفتك الأساسية وأقوى ما عندك. تربط الأنماط بصمت وترى إلى أين تتجه الأمور، فكثيرًا ما تعرف النتيجة المرجّحة قبل أن تستطيع تفسير السبب. تعمل بلا جهد. الخطر أن تثق بها أكثر من اللازم وتنسى اختبارها على أرض الواقع." },
+      { pos: "الأب (Parent)", fn: "Te", name: "التفكير الخارجي", text: "المساعد الذي يحوّل رؤية البطل إلى خطط وأنظمة ونتائج. ينظّم ويضع الأهداف ويقيس ويقطع الهدر. ناضجة ويُعتمد عليها. تحت الضغط تصبح متسلطة أو باردة." },
+      { pos: "الطفل (Child)", fn: "Fi", name: "الشعور الداخلي", text: "منظومة قيمك الداخلية، ولا تزال صغيرة وحساسة. تعرف ما يهمك لكنها تعجز عن وضع المشاعر في كلمات، وقد تجعلك سريع التأثر أو متقلب المزاج. تنضج ببطء مع الاهتمام. هنا يسكن اللعب والإبداع." },
+      { pos: "الأدنى (Inferior)", fn: "Se", name: "الإحساس الخارجي", text: "أضعف وظائفك: الجسد واللحظة الحاضرة والحواس والفعل في العالم المادي. استخدامها مرهق وغير مألوف. تحت الضغط تسيطر عليك بشكل غير صحي، مثل التصفح المفرط والأكل للتعويض والإنفاق المتهور والهروب الحسي. تدريبها بالرياضة والمشي في الخارج والطبخ هو أقصر طريق لتحسّن حالتك." }
+    ],
+    shadowIntro: "وظائف الظل تعيش في اللاوعي. تهدأ وأنت بخير، وتظهر تحت الضغط أو في الصراع أو حين تشعر بأنك محاصر. وهي صور معكوسة للوظائف الأربع الأولى، ويمكنك التعامل معها حين تلاحظها.",
+    shadow: [
+      { pos: "الشخصية المعارِضة (Opposing)", fn: "Ne", name: "الحدس الخارجي", text: "تدافع عن البطل بالمقاومة. تظهر في سيناريوهات متشائمة من نوع ماذا لو انهار كل شيء، وفي رفض أفكار الآخرين قبل سماعها." },
+      { pos: "الأب الناقد (Critical Parent)", fn: "Ti", name: "التفكير الداخلي", text: "قاضٍ داخلي قاسٍ. يدقق في المنطق ويحاسبك ويحاسب غيرك بمعايير مستحيلة، فيغذّي الكمالية ونقد الذات." },
+      { pos: "المحتال (Trickster)", fn: "Fe", name: "الشعور الخارجي", text: "مراوغة ومرتبكة. تسيء قراءة مشاعر المجموعة، أو تقول ما يقع بشكل خاطئ، أو تحاول إرضاء الجميع ثم تنسحب. يبدو الانسجام الاجتماعي لغزًا لا ينحل." },
+      { pos: "الشيطان (Demon)", fn: "Si", name: "الإحساس الداخلي", text: "أعمق نقطة ضعف. تحت الضغط الشديد تعيد عليك إخفاقات الماضي والانزعاج الجسدي بلا توقف، وتتشبث بالروتين الجامد المألوف. منها تأتي عبارة «أنا دائمًا أفشل» والشعور بالعلق في الذكريات القديمة." }
+    ],
+    strH: "نقاط القوة",
+    strNote: "هذه ميول عامة للنمط. احتفظ بما يشبهك فقط.",
+    str: [
+      ["رؤية بعيدة المدى", "ترى إلى أين تتجه الأمور وتستطيع التخطيط لسنوات."],
+      ["تفكير مستقل", "تتساءل عن المسلّمات ولا تحتاج إلى إجماع الناس قبل أن تتحرك."],
+      ["الأنظمة والكفاءة", "تحوّل الأفكار إلى هياكل تعمل وتقطع الهدر."],
+      ["التعلّم الذاتي", "تستطيع تعليم نفسك أشياء صعبة ما دمت ترى الفائدة."],
+      ["معايير عالية", "تهتم بالجودة وتنهي ما التزمت به."],
+      ["الهدوء مع المشكلات المنطقية", "نادرًا ما تمنعك العاطفة من حل مشكلة تقنية."]
+    ],
+    weakH: "نقاط عمياء تستحق العمل", rateQ: "إلى أي حد ينطبق هذا عليّ؟", rateKey: "1 يعني لا ينطبق، 5 يعني ينطبق تمامًا.", inApp: "في Longview:",
+    weak: [
+      { id: "w1", t: "قلة تقدير الناس", text: "ضعف الحدس الاجتماعي (المحتال Fe) يجعل العلاقات تبدو مكلفة بلا عائد ظاهر، فتبتعد. العزلة خطر صحي حقيقي وتضيّق فرصك.", fix: "تبويب People: حدّد وتيرة لثلاثة إلى خمسة أشخاص وأرسل رسالة واحدة أسبوعيًا." },
+      { id: "w2", t: "التخطيط إلى ما لا نهاية والتأخر في البدء", text: "Ni يريد الخطة المثالية قبل التحرك. الانتظار يبدو إنتاجية لكنه تجنّب.", fix: "تبويب Career: طبّق قاعدة الثلاثين دقيقة وأنجز النسخة غير المثالية." },
+      { id: "w3", t: "إهمال الجسد واللحظة الحاضرة", text: "الوظيفة الأدنى Se تجعل النوم والأكل والرياضة اختيارية حتى تنهار.", fix: "تبويبا Routine وBrain: موعد نوم ثابت ومشي يومي وضوء الصباح." },
+      { id: "w4", t: "تبلّد المشاعر أو عدم تسميتها", text: "وظيفة الطفل Fi غير ناضجة، فتبقى المشاعر بلا اسم وتظهر كبرود أو انزعاج أو فقدان للدافع.", fix: "تبويب Journal: أضف سطرًا كل ليلة. ماذا شعرت اليوم ولماذا؟" },
+      { id: "w5", t: "الكمالية وجلد الذات", text: "الأب الناقد (Ti) يحكم على كل محاولة بأنها لا تكفي، فتتوقف عن المحاولة.", fix: "عرّف ما هو كافٍ قبل أن تبدأ. عُدّ المحاولات المكتملة لا المثالية." },
+      { id: "w6", t: "يأس الكل أو لا شيء", text: "حين تبدو الخطة الطويلة مسدودة، يتنبأ Ni والشخصية المعارضة Ne بالفشل ويسقط الأمل بسرعة.", fix: "قلّص الأفق إلى هذا الأسبوع. تابع الحصة الأسبوعية لا النتيجة النهائية." },
+      { id: "w7", t: "عدم طلب المساعدة", text: "الاعتماد على النفس يصبح فخًا: تحمل مشكلاتك وحدك وتبدو قويًا وأنت متوقف.", fix: "كل أسبوع راسل شخصًا بسؤال محدد: مرشد أو خريج سابق أو طبيب." }
+    ],
+    focusH: "محاور تركيزك", focusEmpty: "قيّم النقاط العمياء أعلاه وستظهر أعلى ثلاث هنا. وسيستخدمها المدرّب أيضًا."
+  }
+};
+function typeFocus() { const m = S.mind; if (!m) return []; return TYPE.en.weak.filter(w => (m.rate[w.id] || 0) >= 3).sort((a, b) => m.rate[b.id] - m.rate[a.id]).slice(0, 3).map(w => w.t + " (" + m.rate[w.id] + "/5)"); }
+views.type = () => {
+  const m = S.mind, L = TYPE[m.lang] || TYPE.en, ar = m.lang === "ar";
+  const card = s => '<section class="panel"><div class="row between"><h3>' + esc(s.pos) + '</h3><span class="chip acc mono">' + esc(s.fn) + '</span></div><div class="label" style="margin:6px 0">' + esc(s.name) + '</div><p class="muted">' + esc(s.text) + "</p></section>";
+  const top = L.weak.filter(w => (m.rate[w.id] || 0) >= 3).sort((a, b) => m.rate[b.id] - m.rate[a.id]).slice(0, 3);
+  return '<div class="typewrap' + (ar ? " ar" : "") + '" dir="' + (ar ? "rtl" : "ltr") + '" lang="' + (ar ? "ar" : "en") + '">' +
+    '<div class="head"><div><h2>' + esc(L.title) + '</h2><p>' + esc(L.intro) + '</p></div><div class="row"><button class="btn' + (ar ? "" : " primary") + '" data-act="lang" data-l="en">English</button><button class="btn' + (ar ? " primary" : "") + '" data-act="lang" data-l="ar">العربية</button></div></div>' +
+    '<div class="banner"><span class="small">' + esc(L.note) + "</span></div>" +
+    '<section class="stack"><h3>' + esc(L.stackH) + '</h3><p class="muted">' + esc(L.stackIntro) + '</p><div class="brain">' + L.stack.map(card).join("") + "</div></section>" +
+    '<section class="stack"><h3>' + esc(L.shadowH) + '</h3><p class="muted">' + esc(L.shadowIntro) + '</p><div class="brain">' + L.shadow.map(card).join("") + "</div></section>" +
+    '<section class="panel stack"><h3>' + esc(L.strH) + '</h3><p class="muted small">' + esc(L.strNote) + "</p>" + L.str.map(s => '<div class="item"><div class="grow"><b>' + esc(s[0]) + '</b><div class="muted">' + esc(s[1]) + "</div></div></div>").join("") + "</section>" +
+    '<section class="stack"><h3>' + esc(L.weakH) + '</h3><p class="muted small">' + esc(L.rateKey) + '</p>' + L.weak.map(w => { const r = m.rate[w.id] || 0; return '<section class="panel stack"><h3>' + esc(w.t) + '</h3><p class="muted">' + esc(w.text) + '</p><p><b>' + esc(L.inApp) + '</b> ' + esc(w.fix) + '</p><div class="row"><span class="small muted">' + esc(L.rateQ) + '</span><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="rate" data-id="' + w.id + '" data-v="' + n + '" aria-pressed="' + (r === n) + '" aria-label="' + n + '">' + n + "</button>").join("") + "</div></div></section>"; }).join("") + "</section>" +
+    '<section class="panel stack"><h3>' + esc(L.focusH) + '</h3>' + (top.length ? top.map(w => '<div><b>' + esc(w.t) + '</b> <span class="chip acc mono">' + m.rate[w.id] + '/5</span><p class="muted">' + esc(w.fix) + "</p></div>").join("") : '<p class="muted">' + esc(L.focusEmpty) + "</p>") + "</section></div>";
+};
+const STAGES = [["saved", "Saved"], ["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["closed", "Closed"]];
+const STAGE_ORDER = ["offer", "interview", "applied", "saved", "closed"];
+const PSTEPS = [["write", "One-paragraph write-up"], ["link", "Live link or demo"], ["repo", "Code with a README"], ["shot", "Screenshot or short video"]];
+function newCareer(demo) {
+  const t = today();
+  const c = { jobs: [], reach: [], portfolio: [], skill: {}, topic: "Data analysis course", appsGoal: 5, reachGoal: 3, bridge: "", priv: { on: false, label: "", start: "", best: 0 } };
+  if (demo) {
+    c.jobs = [
+      { id: uid(), company: "Example Co.", role: "Junior Data Analyst", stage: "applied", applied: addDays(t, -2) },
+      { id: uid(), company: "Sample Health Ltd", role: "Data Analyst Intern", stage: "saved", applied: "" },
+      { id: uid(), company: "Demo Retail", role: "BI Analyst", stage: "interview", applied: addDays(t, -6) },
+      { id: uid(), company: "Example Contact Centre", role: "Customer Support Agent", plan: "B", stage: "interview", applied: addDays(t, -3) }
+    ];
+    c.reach = [{ id: uid(), date: addDays(t, -1) }];
+    c.portfolio = [{ id: uid(), name: "Example: sales dashboard", done: { write: true, shot: true } }];
+    [1, 2, 4].forEach(i => { c.skill[addDays(t, -i)] = { s: true }; });
+  }
+  return c;
+}
+function ensureCareer() { if (S && !S.career) S.career = newCareer(!!S.demo); if (S && !S.mind) S.mind = { lang: "en", rate: {} }; }
+function careerStats() { const c = S.career, f = addDays(today(), -6); const ap = c.jobs.filter(j => j.applied && j.applied >= f); return { apps: ap.length, appsB: ap.filter(j => j.plan === "B").length, reach: c.reach.filter(r => r.date >= f).length }; }
+function careerCtx() {
+  const c = S.career, s = careerStats();
+  return { applicationsLast7Days: s.apps, outreachLast7Days: s.reach, weeklyGoals: { applications: c.appsGoal, outreach: c.reachGoal }, pipelineStages: c.jobs.map(j => j.stage), portfolio: c.portfolio.map(p => p.name + " (" + PSTEPS.filter(x => p.done[x[0]]).length + "/4 steps done)"), skillTopic: c.topic, skillStreakDays: streak(c.skill, "s") };
+}
+function privDays() { const p = S.career.priv; return p.on && p.start ? Math.max(0, diffDays(today(), p.start)) : 0; }
+views.career = () => {
+  const c = S.career, st = careerStats(), k = today(), sk = !!(c.skill[k] && c.skill[k].s), p = c.priv;
+  const jobs = [...c.jobs].sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage));
+  const reachToday = c.reach.filter(r => r.date === k).length;
+  const sk30 = Array.from({ length: 30 }, (_, i) => c.skill[addDays(k, -i)]).filter(x => x && x.s).length;
+  const bd = c.bridge ? diffDays(c.bridge, k) : null;
+  const bridgeHtml = '<section class="panel stack"><h3>Plan B is a bridge</h3><p class="muted">Set a date to step back and ask whether you are closer to a data role than when you started. Without a date, a bridge turns into a destination.</p><div class="row"><label class="field" style="width:200px">Review date<input type="date" data-set="career.bridge" value="' + esc(c.bridge || "") + '"></label>' + (bd == null ? "" : '<div><b class="mono" style="font-size:1.6rem">' + Math.max(0, bd) + '</b> <span class="muted">days to review</span></div>') + '</div><p class="small">You kept your 30 minutes on <b class="mono">' + sk30 + '</b> of the last 30 days. ' + (bd != null && bd <= 0 ? "Review day: if plan A has not moved, decide what to change, not whether to give up." : "") + "</p></section>";
+  return demoBanner() + '<div class="head"><div><h2>Career</h2><p>Your skills are not the bottleneck. Finding people, showing proof and applying steadily are. Aim for a small, boring weekly quota and keep it.</p></div></div>' +
+    '<div class="grid3"><section class="panel"><div class="label">Applications, last 7 days</div><b class="mono" style="font-size:1.8rem">' + st.apps + '</b> <span class="muted">of ' + c.appsGoal + ' goal. Plan A ' + (st.apps - st.appsB) + ', Plan B ' + st.appsB + '</span></section>' +
+    '<section class="panel"><div class="label">Messages to real people</div><b class="mono" style="font-size:1.8rem">' + st.reach + '</b> <span class="muted">of ' + c.reachGoal + ' goal</span></section>' +
+    '<section class="panel"><div class="label">Skill streak</div><b class="mono" style="font-size:1.8rem">' + streak(c.skill, "s") + '</b> <span class="muted">days</span></section></div>' +
+    '<div class="grid2"><section class="panel stack"><h3>Today\'s 30 minutes</h3><div class="item' + (sk ? " done" : "") + '"><button class="chk" role="checkbox" aria-checked="' + sk + '" aria-label="30 minutes on my skill" data-act="toggleSkill"></button><div class="grow">30 minutes, no phone, on one thing</div></div><label class="field">What are you working on<input type="text" data-set="career.topic" value="' + esc(c.topic) + '"></label><p class="muted small">Thirty minutes is the floor, not the target. Starting is the whole job. Motivation tends to follow action, not the other way round.</p></section>' +
+    '<section class="panel stack"><h3>Reach a real person</h3><p class="muted">A short message to an alumnus, a recruiter or someone on a data team usually beats ten cold applications. Log each one you send.</p><div class="row"><button class="btn primary" data-act="logReach">Log a message sent</button>' + (reachToday ? '<button class="btn ghost" data-act="undoReach">Undo</button><span class="muted small">' + reachToday + " today</span>" : "") + '</div><div class="row"><label class="field" style="width:150px">Applications per week<input type="number" min="0" max="50" data-set="career.appsGoal" value="' + c.appsGoal + '"></label><label class="field" style="width:150px">Messages per week<input type="number" min="0" max="50" data-set="career.reachGoal" value="' + c.reachGoal + '"></label></div></section></div>' +
+    bridgeHtml + '<section class="panel"><h3>Pipeline</h3>' + (jobs.length ? '<div class="tablewrap"><table><thead><tr><th>Company</th><th>Role</th><th>Plan</th><th>Stage</th><th>Applied</th><th></th></tr></thead><tbody>' + jobs.map(j => "<tr><td>" + esc(j.company) + "</td><td>" + esc(j.role) + '</td><td><select data-jplan="' + j.id + '" aria-label="Plan for ' + esc(j.company) + '"><option value="A"' + (j.plan === "B" ? "" : " selected") + '>A</option><option value="B"' + (j.plan === "B" ? " selected" : "") + '>B</option></select></td><td><select data-job="' + j.id + '" aria-label="Stage for ' + esc(j.company) + '">' + STAGES.map(s => '<option value="' + s[0] + '"' + (s[0] === j.stage ? " selected" : "") + ">" + s[1] + "</option>").join("") + '</select></td><td class="mono">' + (j.applied ? fmt(j.applied) : "–") + '</td><td><button class="btn ghost danger" data-act="delJob" data-id="' + j.id + '">Remove</button></td></tr>').join("") + "</tbody></table></div>" : '<p class="muted">No roles yet. Save every job you find, even before you apply.</p>') +
+    '<form data-form="addJob" class="form" style="margin-top:14px"><label class="field">Company<input type="text" id="jco" required></label><label class="field">Role<input type="text" id="jrole" required placeholder="e.g. Junior Data Analyst"></label><label class="field">Plan<select id="jplan"><option value="A">A: data roles</option><option value="B">B: bridge job</option></select></label><label class="field">Stage<select id="jstage">' + STAGES.map(s => '<option value="' + s[0] + '">' + s[1] + "</option>").join("") + '</select></label><button class="btn primary" type="submit">Add</button></form></section>' +
+    '<section class="panel stack"><h3>Portfolio</h3><p class="muted">Pick your best two or three projects and finish the four proofs on each. A recruiter should understand a project in 60 seconds.</p>' + (c.portfolio.length ? c.portfolio.map(pr => { const n = PSTEPS.filter(s => pr.done[s[0]]).length; return '<div class="entry"><div class="row between"><b>' + esc(pr.name) + '</b><span class="row"><span class="chip ' + (n === 4 ? "good" : "acc") + '">' + n + '/4</span><button class="btn ghost danger" data-act="delPort" data-id="' + pr.id + '">Remove</button></span></div>' + PSTEPS.map(s => '<div class="item"><button class="chk" role="checkbox" aria-checked="' + !!pr.done[s[0]] + '" aria-label="' + s[1] + '" data-act="togglePort" data-id="' + pr.id + '" data-s="' + s[0] + '"></button><div class="grow">' + s[1] + "</div></div>").join("") + "</div>"; }).join("") : '<p class="muted">No projects yet.</p>') +
+    '<form data-form="addPort" class="form"><label class="field">Project<input type="text" id="portname" required placeholder="e.g. Hospital information system"></label><button class="btn primary" type="submit">Add project</button></form></section>' +
+    '<section class="panel stack"><h3>Your 60-second introduction</h3><p class="muted small">Claude writes it from your profile, portfolio and goals, without inventing anything. Fill in Me and Portfolio first for a better result.</p><div class="row"><button class="btn primary" data-act="genPitch"' + (ai.pitchBusy ? " disabled" : "") + ">" + (ai.pitchBusy ? "Writing..." : "Write my introduction") + "</button>" + (ai.pitchBusy ? '<button class="btn" data-act="stop">Stop</button>' : "") + '</div><div class="out" id="pitchOut">' + esc(ai.pitch || "") + "</div></section>" +
+    '<section class="panel stack"><h3>Where to look</h3><p><b>Boards:</b> LinkedIn (search your country and also remote), Wuzzuf, Bayt, Forasna and Indeed.</p><p><b>Cohort hiring:</b> graduate and trainee programmes at banks, telecoms and large retailers often hire in groups, so apply early.</p><p><b>Direct:</b> list five companies you would like to work for, find someone on their data or engineering team, and ask one specific question. Do not ask for a job in the first message.</p><p><b>Titles to search:</b> Junior Data Analyst, Reporting Analyst, Business Intelligence Analyst, Data Analyst Intern, Junior Full Stack Developer.</p></section>' +
+    '<section class="panel stack"><h3>Private streak</h3>' + (p.on ? '<div class="row between"><div><div class="label">' + esc(p.label || "Streak") + '</div><b class="mono" style="font-size:2rem">' + privDays() + '</b> days <span class="muted small">best ' + Math.max(p.best || 0, privDays()) + '</span></div><div class="row"><button class="btn" data-act="privReset">Reset to day 0</button><button class="btn ghost" data-act="privOff">Turn off</button></div></div><p class="muted small">A reset is data, not failure. What counts is the gap between slips getting longer. If urges feel out of your control, a therapist can help, and it is well treated.</p>' : '<p class="muted small">Optional. Track days since you last did something you are trying to quit. It stays in your private data, and you choose what to call it.</p><form data-form="privStart" class="form"><label class="field">Name it anything<input type="text" id="privname" placeholder="e.g. Clean streak"></label><button class="btn primary" type="submit">Start at day 0</button></form>') + "</section>";
+};
+function pstatus(p) {
+  if (!p.last) return ["never", "bad", 999];
+  const d = diffDays(today(), p.last), c = p.cadence || 30;
+  return d <= c ? [d + "d ago", "good", d / c] : d <= c * 1.5 ? [d + "d ago", "warn", d / c] : [d + "d ago", "bad", d / c];
+}
+views.people = () => {
+  const wk = contactsIn(7).length, nm = S.contacts.filter(c => c.fresh && c.date >= addDays(today(), -29)).length;
+  const ps = [...S.people].sort((a, b) => pstatus(b)[2] - pstatus(a)[2]);
+  const over = ps.filter(p => pstatus(p)[1] !== "good").length;
+  return demoBanner() + '<div class="head"><div><h2>People</h2><p>Track who you reach and who you are letting drift. A small, high-quality circle is enough. It only works if you tend it on purpose.</p></div></div>' +
+    '<div class="grid3"><section class="panel"><div class="label">Contacts this week</div><b class="mono" style="font-size:1.8rem">' + wk + '</b> <span class="muted">of ' + S.social.weekly + ' goal</span></section><section class="panel"><div class="label">New people, last 30 days</div><b class="mono" style="font-size:1.8rem">' + nm + '</b> <span class="muted">of ' + S.social.newMonthly + ' goal</span></section><section class="panel"><div class="label">Relationships needing you</div><b class="mono" style="font-size:1.8rem">' + over + '</b> <span class="muted">of ' + S.people.length + "</span></section></div>" +
+    '<section class="panel"><h3>Your circle</h3>' + (ps.length ? ps.map(p => { const st = pstatus(p); return '<div class="item"><div class="grow"><b>' + esc(p.name) + '</b> <span class="muted small">' + esc(p.rel) + ", every " + p.cadence + ' days</span>' + (p.notes ? '<div class="muted small">' + esc(p.notes) + "</div>" : "") + (ai["d" + p.id] ? '<div class="ai" style="margin-top:8px"><div class="out">' + esc(ai["d" + p.id]) + '</div><div class="row"><button class="btn" data-act="copyDraft" data-id="' + p.id + '">Copy</button></div></div>' : "") + '</div><span class="chip ' + st[1] + '">' + st[0] + '</span><span class="row"><button class="btn" data-act="logContact" data-id="' + p.id + '">Talked today</button><button class="btn" data-act="draft" data-id="' + p.id + '"' + (ai["db" + p.id] ? " disabled" : "") + ">" + (ai["db" + p.id] ? "Writing..." : "Draft message") + '</button><button class="btn ghost danger" data-act="delPerson" data-id="' + p.id + '" aria-label="Remove ' + esc(p.name) + '">Remove</button></span></div>'; }).join("") : '<p class="muted">Add the few people who matter most.</p>') + "</section>" +
+    '<div class="grid2"><section class="panel"><h3>Add someone</h3><form data-form="addPerson" class="stack"><label class="field">Name<input type="text" id="pname" required></label><div class="form"><label class="field">Relationship<input type="text" id="prel" placeholder="Friend, mentor, family"></label><label class="field">Reach out every (days)<input type="number" id="pcad" min="1" value="30"></label></div><label class="field">Last spoke<input type="text" id="plast" placeholder="YYYY-MM-DD, or leave empty" pattern="\\d{4}-\\d{2}-\\d{2}|"></label><button class="btn primary" type="submit">Add</button></form></section>' +
+    '<section class="panel"><h3>Met someone new</h3><form data-form="newPerson" class="stack"><label class="field">Name<input type="text" id="nname" required></label><label class="field">Where and what you liked about them<input type="text" id="nnote"></label><button class="btn primary" type="submit">Log new person</button></form></section></div>' +
+    '<section class="panel stack"><h3>The case, for a strategist</h3><p>Friends will not show up as an immediate return, so the benefit is easy to miss. The evidence is about the long run. The 2024 Lancet Commission lists social isolation among the 14 modifiable risk factors for dementia. The Harvard Study of Adult Development has linked the quality of close relationships in midlife to health and well-being in later life.</p><p>You do not need a wide network. Three to five people you can speak to honestly, plus a small trickle of new contacts, covers most of the benefit. Longview tracks it like any other system: set the cadence once, then let the overdue list tell you who to message.</p><div class="row"><label class="field" style="width:160px">Contacts per week<input type="number" min="0" max="20" data-set="social.weekly" value="' + S.social.weekly + '"></label><label class="field" style="width:160px">New people per month<input type="number" min="0" max="20" data-set="social.newMonthly" value="' + S.social.newMonthly + '"></label></div></section>';
+};
+const BRAIN = [
+  ["avoid", "Strong", "Chronic short sleep", "Under about 6 hours, repeated, impairs attention and memory the next day and is linked to worse long-term cognitive and mental health. Aim for 7 to 9 hours on a fixed schedule."],
+  ["avoid", "Strong", "Heavy drinking", "Heavy alcohol use is a recognised dementia risk factor, and large imaging studies associate even moderate intake with lower brain volume. Make alcohol-free the default."],
+  ["avoid", "Strong", "Smoking", "Smoking raises dementia risk, and the risk falls after quitting. It is never too late to count."],
+  ["avoid", "Strong", "Physical inactivity", "Long stretches of sitting and little aerobic activity raise cardiovascular and dementia risk. Break up sitting and move daily."],
+  ["avoid", "Strong", "Head impacts", "Traumatic brain injury is a listed risk factor. Wear a helmet and protect your head in contact sports."],
+  ["avoid", "Strong", "Untreated hearing loss", "Hearing loss is among the largest modifiable risk factors in midlife. Get it tested, and treat it if found."],
+  ["avoid", "Moderate", "Social isolation", "Persistent isolation is associated with faster cognitive decline and depression. Quality matters more than headcount."],
+  ["avoid", "Moderate", "Untreated low mood", "Depression is a listed risk factor and wrecks sleep and drive. Treat low mood as a medical signal, not a character flaw."],
+  ["avoid", "Indirect", "Late screens and doomscrolling", "The harm runs mainly through delayed sleep and fragmented attention, not the screen itself. Cut the last 45 minutes before bed and the first hour after waking."],
+  ["avoid", "Strong", "Unchecked blood pressure, cholesterol and sugar", "High blood pressure, high LDL cholesterol and diabetes are usually silent and strongly linked to later cognitive decline. Get them measured every year."],
+  ["protect", "Strong", "Aerobic exercise", "About 150 minutes a week of moderate activity supports vascular health and is associated with better cognition. Add two strength sessions."],
+  ["protect", "Moderate", "Hard learning", "Education and cognitively demanding work are linked to resilience. Keep learning something difficult: a language, an instrument, new math."],
+  ["protect", "Moderate", "Mediterranean-style eating", "Diets rich in vegetables, legumes, fish, nuts and olive oil are associated with slower cognitive decline."],
+  ["protect", "Moderate", "Regular sleep and morning daylight", "A fixed wake time and daylight in the first hour anchor your body clock, which makes consistent sleep much easier."],
+  ["protect", "Moderate", "A few close relationships", "Frequent, honest contact with a small circle is associated with better outcomes. Schedule it like any other priority."]
+];
+views.brain = () => {
+  const sl = avgSleep(), alc = S.habits.find(h => /alcohol/i.test(h.name)), ex = S.habits.find(h => /(walk|run|exercise|zone)/i.test(h.name));
+  const sig = [];
+  if (sl != null) sig.push("Average sleep, last 14 days: <b class=mono>" + sl.toFixed(1) + " h</b> " + (sl < 7 ? '<span class="chip bad">below 7</span>' : '<span class="chip good">in range</span>'));
+  if (alc && habitRate(alc) != null) sig.push("Alcohol-free days: <b class=mono>" + Math.round(habitRate(alc) * 100) + "%</b>");
+  if (ex && habitRate(ex) != null) sig.push("Exercise habit kept: <b class=mono>" + Math.round(habitRate(ex) * 100) + "%</b>");
+  sig.push("Contacts logged, last 14 days: <b class=mono>" + contactsIn(14).length + "</b>");
+  const card = b => '<section class="panel"><div class="row between"><h3>' + b[2] + '</h3><span class="chip ' + (b[1] === "Strong" ? "good" : b[1] === "Moderate" ? "acc" : "") + '">' + b[1] + ' evidence</span></div><p class="muted">' + b[3] + "</p></section>";
+  return demoBanner() + '<div class="head"><div><h2>Brain health</h2><p>The 2024 Lancet Commission on dementia identified 14 modifiable risk factors that together account for roughly 45% of cases worldwide. Most of them are daily habits. This is general information, not medical advice.</p></div></div>' +
+    '<section class="panel"><h3>Your numbers</h3><div class="stack small">' + sig.map(s => "<div>" + s + "</div>").join("") + "</div></section>" +
+    '<h3>Avoid</h3><div class="brain">' + BRAIN.filter(b => b[0] === "avoid").map(card).join("") + "</div>" +
+    '<h3>Protect</h3><div class="brain">' + BRAIN.filter(b => b[0] === "protect").map(card).join("") + "</div>";
+};
+views.coach = () => {
+  const chips = ["Read my week and be blunt", "What should I stop doing?", "Why bother with people?", "Plan tomorrow around my weakest area", "Help me with my job search"];
+  return '<div class="head"><div><h2>Coach</h2><p>Ask anything about your routine, habits, journal or relationships. It sees the same numbers you do.</p></div></div>' +
+    '<section class="panel stack"><div class="chat" id="chat">' + (coachTurns.length ? coachTurns.map(t => '<div class="bubble ' + (t.role === "user" ? "me" : "ai") + '">' + esc(t.content) + "</div>").join("") : '<p class="muted">Start with a question or pick one below.</p>') + '</div><div class="row">' + chips.map(c => '<button class="btn" data-act="coachChip" data-q="' + esc(c) + '">' + esc(c) + "</button>").join("") + '</div><form data-form="coach" class="row" style="flex-wrap:nowrap"><input type="text" id="cin" placeholder="Ask your coach" aria-label="Message" style="flex:1" autocomplete="off"><button class="btn primary" type="submit"' + (ai.coachBusy ? " disabled" : "") + ">Send</button>" + (ai.coachBusy ? '<button type="button" class="btn" data-act="stop">Stop</button>' : "") + "</form></section>";
+};
+views.me = () => {
+  const p = S.profile;
+  return '<div class="head"><div><h2>Me</h2><p>Longview works from what you tell it here. Be specific: the coach quotes this back to you.</p></div></div>' +
+    '<section class="panel stack"><div class="form"><label class="field">Type<input type="text" data-set="profile.type" value="' + esc(p.type) + '"></label><label class="field">Usual wake time<input type="time" data-set="profile.wake" value="' + esc(p.wake) + '"></label><label class="field">Usual bedtime<input type="time" data-set="profile.sleep" value="' + esc(p.sleep) + '"></label></div>' +
+    '<label class="field">Goals for the next year<textarea data-set="profile.goals" style="min-height:84px" placeholder="e.g. Ship a product, run a half marathon, keep two close friendships.">' + esc(p.goals) + '</textarea></label>' +
+    '<label class="field">Strengths to build on<textarea data-set="profile.strengths" style="min-height:84px" placeholder="e.g. Long-range planning, independent execution, learning fast.">' + esc(p.strengths) + '</textarea></label>' +
+    '<label class="field">Weaknesses to work on<textarea data-set="profile.weaknesses" style="min-height:84px" placeholder="e.g. Skipping relationships, over-working, ignoring sleep.">' + esc(p.weaknesses) + "</textarea></label></section>" +
+    '<section class="panel stack"><h3>Your data</h3><p class="muted small">Entries are saved to your account when you are signed in, and in this browser as a copy.</p><div class="row"><button class="btn" data-act="exportData">Export as JSON</button><button class="btn danger" data-act="resetAll">' + (ai.confirmReset ? "Click again to erase everything" : "Erase everything") + "</button></div></section>";
+};
+
+/* ---------- render ---------- */
+function render() {
+  ensureCareer();
+  const nav = $("#nav");
+  nav.innerHTML = VIEWS.map(v => '<a href="#' + v[0] + '"' + (v[0] === view ? ' aria-current="page"' : "") + ">" + v[1] + "</a>").join("");
+  $("#main").innerHTML = '<div id="due"></div>' + (views[view] || views.today)();
+  renderDue();
+}
+function route() { const h = location.hash.replace("#", ""); view = views[h] ? h : "today"; render(); window.scrollTo(0, 0); }
+addEventListener("hashchange", route);
+
+/* ---------- reminders ---------- */
+let snooze = {};
+function renderDue() {
+  const el = $("#due"); if (!el) return;
+  const t = today(), n = nowHM(), done = S.rdone[t] || {};
+  const due = S.reminders.filter(m => m.time <= n && !done[m.id] && !(snooze[m.id] && snooze[m.id] > n) && diffMin(n, m.time) <= 180);
+  el.innerHTML = due.map(m => '<div class="banner due" style="margin-bottom:10px"><span><b class="mono">' + esc(m.time) + "</b> " + esc(m.text) + '</span><span class="row"><button class="btn primary" data-act="remDone" data-id="' + m.id + '">Done</button><button class="btn" data-act="remSnooze" data-id="' + m.id + '">10 minutes</button></span></div>').join("");
+}
+function diffMin(a, b) { const [h1, m1] = a.split(":").map(Number), [h2, m2] = b.split(":").map(Number); return (h1 * 60 + m1) - (h2 * 60 + m2); }
+setInterval(() => { if (S) renderDue(); }, 30000);
+
+/* ---------- actions ---------- */
+const acts = {
+  lang(t) { S.mind.lang = t.dataset.l; save(); render(); },
+  rate(t) { const r = S.mind.rate, v = +t.dataset.v; if (r[t.dataset.id] === v) delete r[t.dataset.id]; else r[t.dataset.id] = v; save(); render(); },
+  toggleSkill() { const k = today(); const on = S.career.skill[k] && S.career.skill[k].s; if (on) delete S.career.skill[k]; else S.career.skill[k] = { s: true }; save(); render(); },
+  logReach() { S.career.reach.push({ id: uid(), date: today() }); save(); render(); },
+  undoReach() { const i = S.career.reach.map(r => r.date).lastIndexOf(today()); if (i >= 0) S.career.reach.splice(i, 1); save(); render(); },
+  delJob(t) { S.career.jobs = S.career.jobs.filter(j => j.id !== t.dataset.id); save(); render(); },
+  delPort(t) { S.career.portfolio = S.career.portfolio.filter(p => p.id !== t.dataset.id); save(); render(); },
+  togglePort(t) { const p = S.career.portfolio.find(x => x.id === t.dataset.id); if (!p) return; p.done[t.dataset.s] = !p.done[t.dataset.s]; save(); render(); },
+  privReset() { const p = S.career.priv; p.best = Math.max(p.best || 0, privDays()); p.start = today(); save(); render(); },
+  privOff() { S.career.priv = { on: false, label: "", start: "", best: 0 }; save(); render(); },
+  async genPitch() {
+    ctl = new AbortController(); ai.pitchBusy = true; ai.pitch = "Thinking..."; render();
+    try { const r = await askText("Write a 60-second self-introduction (about 110 words, first person, plain and confident, no buzzwords) for a graduating student applying to junior data analyst or developer roles. Use only facts from their data and never invent employers, degrees, tools or numbers. If their data is thin, write the best honest version and add one line at the end listing what to fill in. End with the kind of role they want. Their data: " + ctx(), { cache: false, signal: ctl.signal, onText: u => { ai.pitch = u.text; const o = $("#pitchOut"); if (o) o.textContent = u.text; } }); ai.pitch = r.text; }
+    catch (e) { ai.pitch = (e.text || "") + (e.code === "cancelled" ? "" : "\n\n" + errText(e)); }
+    ai.pitchBusy = false; render();
+  },
+  toggleHabit(t) { const l = todayLog(); l[t.dataset.id] = !l[t.dataset.id]; if (!l[t.dataset.id]) delete l[t.dataset.id]; S.demo = S.demo; save(); render(); },
+  toggleRoutine(t) { const l = todayR(); l[t.dataset.id] = !l[t.dataset.id]; if (!l[t.dataset.id]) delete l[t.dataset.id]; save(); render(); },
+  ciSet(t) { const c = ci(), f = t.dataset.f, v = +t.dataset.v; c[f] = c[f] === v ? 0 : v; save(); render(); },
+  delHabit(t) { S.habits = S.habits.filter(h => h.id !== t.dataset.id); save(); render(); },
+  delRoutine(t) { S.routine = S.routine.filter(r => r.id !== t.dataset.id); save(); render(); },
+  delReminder(t) { S.reminders = S.reminders.filter(r => r.id !== t.dataset.id); save(); render(); },
+  delPerson(t) { S.people = S.people.filter(p => p.id !== t.dataset.id); save(); render(); },
+  delJournal(t) { S.journal = S.journal.filter(j => j.id !== t.dataset.id); save(); render(); },
+  remDone(t) { const k = today(); (S.rdone[k] = S.rdone[k] || {})[t.dataset.id] = true; save(); renderDue(); },
+  remSnooze(t) { const d = new Date(Date.now() + 600000); snooze[t.dataset.id] = pad(d.getHours()) + ":" + pad(d.getMinutes()); renderDue(); },
+  clearDemo() { const p = S.profile; S = { v: 1, demo: false, updated: 0, profile: p, habits: [], hlog: {}, routine: [], rlog: {}, checkin: {}, journal: [], people: [], contacts: [], social: { weekly: 2, newMonthly: 1 }, reminders: [], rdone: {} }; save(); location.hash = "#routine"; route(); },
+  saveJournal() { const v = (D.journal || "").trim(); if (!v) return; S.journal.unshift({ id: uid(), date: today(), text: v, ai: null }); D.journal = ""; save(); render(); },
+  logContact(t) { const p = S.people.find(x => x.id === t.dataset.id); if (!p) return; p.last = today(); S.contacts.push({ id: uid(), date: today(), who: p.id, kind: "contact", fresh: false }); save(); render(); },
+  addSuggested(t) { const h = ai.habits[+t.dataset.i]; if (!h) return; S.habits.push({ id: uid(), name: h.name, kind: h.kind === "avoid" ? "avoid" : "build" }); ai.habits.splice(+t.dataset.i, 1); save(); render(); },
+  applyRoutine(t) { const items = ai.routine.map(r => ({ id: uid(), time: r.time, label: r.label, cat: CATS[r.cat] ? r.cat : "mind" })); S.routine = t.dataset.mode === "replace" ? items : S.routine.concat(items); ai.routine = null; save(); render(); },
+  copyDraft(t) { const txt = ai["d" + t.dataset.id] || ""; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { t.textContent = "Copied"; }, () => { t.textContent = "Select the text and copy"; }); },
+  async exportData() { try { const dl = await window.claude.use("downloads"); if (!dl) throw 0; await dl.save({ filename: "longview-data.json", data: JSON.stringify(S, null, 2) }); } catch (e) { if (!e || e.code !== "declined") setStatus("Export is not available in this view"); } },
+  resetAll(t) { if (!ai.confirmReset) { ai.confirmReset = true; render(); return; } ai.confirmReset = false; S = emptyAll(); D = {}; save(); location.hash = "#today"; route(); },
+  stop() { if (ctl) ctl.abort(); },
+  coachChip(t) { sendCoach(t.dataset.q); },
+  async readOutlook() {
+    ctl = new AbortController(); ai.outlookBusy = true; ai.outlook = "Thinking..."; render();
+    try { const r = await askText("Look at this person's last 14 days of data. In under 220 words: say where this trajectory leads in 90 days if nothing changes, name the two behaviours that matter most, and give three concrete actions for this week. Their data: " + ctx(), { signal: ctl.signal, onText: u => { ai.outlook = u.text; const o = $("#outlookOut"); if (o) o.textContent = u.text; } }); ai.outlook = r.text; }
+    catch (e) { ai.outlook = (e.text || "") + (e.code === "cancelled" ? "" : "\n\n" + errText(e)); }
+    ai.outlookBusy = false; render();
+  },
+  async genHabits() {
+    ai.habitsBusy = true; ai.habitsErr = ""; render();
+    try { ai.habits = (await askJson('Reply with only a JSON array of 5 objects like {"name": string under 60 chars, "kind": "build" or "avoid", "why": one sentence tied to this person\'s data}. Suggest habits that fix their weaknesses and protect brain health. Do not repeat habits they already track. Their data: ' + ctx(), { modelTier: "default" })).filter(h => h && h.name).slice(0, 6); }
+    catch (e) { ai.habitsErr = errText(e); }
+    ai.habitsBusy = false; render();
+  },
+  async genRoutine() {
+    const wake = D.rwake || S.profile.wake, bed = D.rbed || S.profile.sleep, notes = D.rnotes || "";
+    ai.routineBusy = true; ai.routineErr = ""; render();
+    try {
+      const r = await askJson('Reply with only a JSON array of 9 to 12 objects like {"time": "HH:MM" in 24h, "label": string under 60 chars, "cat": one of "sleep","body","work","mind","social","recovery"}, in time order, for one ordinary day. Wake at ' + wake + ", lights out by " + bed + ". Include a morning daylight block, an exercise block, deep work, a screen-free wind-down, a short daily social touch (one message or call to a person who matters), and an evening journal. Keep it realistic. Constraints from the person: " + (notes || "none") + ". Their data: " + ctx(), { modelTier: "default" });
+      ai.routine = r.filter(x => x && /^\d{2}:\d{2}$/.test(x.time) && x.label).slice(0, 14);
+      if (!ai.routine.length) throw { code: "invalid_json" };
+    } catch (e) { ai.routineErr = errText(e); }
+    ai.routineBusy = false; render();
+  },
+  async reflect(t) {
+    const j = S.journal.find(x => x.id === t.dataset.id); if (!j) return;
+    ai["j" + j.id] = true; ai["je" + j.id] = ""; render();
+    try { j.ai = await askJson('Reply with only a JSON object {"pattern": one or two sentences, "do": array of 3 short actions for tomorrow, "avoid": array of 2 short things to stop, "outcome": two sentences on where this leads in 90 days if the pattern repeats}. Be specific and candid, no flattery, no medical claims beyond mainstream evidence. Journal entry from ' + j.date + ': """' + j.text.slice(0, 2000) + '""" Their data: ' + ctx(), { modelTier: "default" }); if (!j.ai || !j.ai.pattern) { j.ai = null; throw { code: "invalid_json" }; } save(); }
+    catch (e) { ai["je" + j.id] = errText(e); }
+    ai["j" + j.id] = false; render();
+  },
+  async draft(t) {
+    const p = S.people.find(x => x.id === t.dataset.id); if (!p) return;
+    ai["db" + p.id] = true; render();
+    try { const r = await askText("Write a short, low-pressure message (under 45 words, plain text, no emojis) from this person to someone they have not spoken to in a while. It should sound natural and specific, not needy, and end with an easy next step. Relationship: " + p.rel + ". Days since last contact: " + (p.last ? diffDays(today(), p.last) : "unknown") + ". Notes: " + (p.notes || "none") + ". Reply with the message only.", { cache: false }); ai["d" + p.id] = r.text; }
+    catch (e) { ai["d" + p.id] = errText(e); }
+    ai["db" + p.id] = false; render();
+  }
+};
+let ctl = null;
+function emptyAll() { return { v: 1, demo: false, updated: 0, profile: { type: "INTJ", wake: "07:00", sleep: "23:30", goals: "", strengths: "", weaknesses: "" }, habits: [], hlog: {}, routine: [], rlog: {}, checkin: {}, journal: [], people: [], contacts: [], social: { weekly: 2, newMonthly: 1 }, reminders: [], rdone: {} }; }
+async function sendCoach(q) {
+  q = (q || "").trim(); if (!q || ai.coachBusy) return;
+  coachTurns.push({ role: "user", content: q }); coachTurns.push({ role: "assistant", content: "Thinking..." });
+  ai.coachBusy = true; ctl = new AbortController(); render();
+  const idx = coachTurns.length - 1, input = [{ role: "user", content: COACH_RULES + ctx() }].concat(coachTurns.slice(0, idx).filter(t => t.content !== "Thinking...").slice(-12));
+  try { const r = await askText(input, { cache: false, signal: ctl.signal, onText: u => { coachTurns[idx].content = u.text; const b = $("#chat")?.lastElementChild; if (b) b.textContent = u.text; } }); coachTurns[idx].content = r.text; }
+  catch (e) { coachTurns[idx].content = (e.text ? e.text + "\n\n" : "") + (e.code === "cancelled" ? "Stopped." : errText(e)); }
+  ai.coachBusy = false; render();
+}
+
+/* ---------- forms and inputs ---------- */
+const forms = {
+  addJob(f) { const st = $("#jstage").value; S.career.jobs.push({ id: uid(), company: $("#jco").value.trim(), role: $("#jrole").value.trim(), plan: $("#jplan").value, stage: st, applied: st === "saved" ? "" : today() }); save(); render(); },
+  addPort(f) { S.career.portfolio.push({ id: uid(), name: $("#portname").value.trim(), done: {} }); save(); render(); },
+  privStart(f) { S.career.priv = { on: true, label: $("#privname").value.trim(), start: today(), best: 0 }; save(); render(); },
+  addHabit(f) { const n = $("#hname").value.trim(); if (!n) return; S.habits.push({ id: uid(), name: n, kind: $("#hkind").value }); save(); render(); },
+  addRoutine(f) { S.routine.push({ id: uid(), time: $("#rtime").value, label: $("#rlabel").value.trim(), cat: $("#rcat").value }); save(); render(); },
+  addReminder(f) { S.reminders.push({ id: uid(), time: $("#mtime").value, text: $("#mtext").value.trim() }); save(); render(); },
+  addPerson(f) { const l = $("#plast").value.trim(); S.people.push({ id: uid(), name: $("#pname").value.trim(), rel: $("#prel").value.trim() || "Contact", cadence: Math.max(1, +$("#pcad").value || 30), last: /^\d{4}-\d{2}-\d{2}$/.test(l) ? l : "", notes: "" }); save(); render(); },
+  newPerson(f) { const id = uid(); S.people.push({ id, name: $("#nname").value.trim(), rel: "New", cadence: 30, last: today(), notes: $("#nnote").value.trim() }); S.contacts.push({ id: uid(), date: today(), who: id, kind: "meet", fresh: true }); save(); render(); },
+  coach(f) { const i = $("#cin"); const v = i.value; i.value = ""; sendCoach(v); }
+};
+document.addEventListener("click", e => { const t = e.target.closest("[data-act]"); if (t && acts[t.dataset.act]) acts[t.dataset.act](t, e); });
+document.addEventListener("submit", e => { const f = e.target.closest("[data-form]"); if (f && forms[f.dataset.form]) { e.preventDefault(); forms[f.dataset.form](f); } });
+document.addEventListener("input", e => { const t = e.target; if (t.dataset && t.dataset.draft) D[t.dataset.draft] = t.value; });
+document.addEventListener("change", e => {
+  const t = e.target; if (!t.dataset) return;
+  if (t.dataset.jplan) { const j = S.career.jobs.find(x => x.id === t.dataset.jplan); if (j) { j.plan = t.value; save(); render(); } }
+  else if (t.dataset.job) { const j = S.career.jobs.find(x => x.id === t.dataset.job); if (j) { j.stage = t.value; if (t.value !== "saved" && !j.applied) j.applied = today(); save(); render(); } }
+  else if (t.dataset.ci) { ci()[t.dataset.ci] = t.value === "" ? "" : clamp(+t.value, 0, 14); save(); render(); }
+  else if (t.dataset.set) { const [a, b] = t.dataset.set.split("."); S[a][b] = t.type === "number" ? Math.max(0, +t.value || 0) : t.value; save(); if (a === "social") render(); }
+  else if (t.dataset.draft) D[t.dataset.draft] = t.value;
+});
+
+/* ---------- boot ---------- */
+S = lsGet();
+if (!S || !S.habits) S = demoState();
+S.rdone = S.rdone || {};
+route();
+connectStore();
+</script>
+
+</body></html>

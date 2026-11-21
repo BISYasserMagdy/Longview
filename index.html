@@ -614,6 +614,12 @@ const TYPE = {
       { pos: "Child", fn: "Fi", name: "Introverted Feeling", text: "Your inner value system, still young and sensitive. It knows what matters to you but struggles to put feelings into words, and can make you touchy or moody. It matures slowly with attention. Play and creativity live here." },
       { pos: "Inferior", fn: "Se", name: "Extraverted Sensing", text: "Your weakest function: the body, the present moment, the senses and action in the physical world. It feels awkward and draining. Under stress it takes over in unhealthy ways, such as binge scrolling, comfort eating, impulsive spending and other sensory escapes. Training it with exercise, walking outside, cooking or sport is the shortest route to feeling better." }
     ],
+    stressH: "Under stress: the loop and the grip",
+    stressIntro: "Two patterns describe how an INTJ typically breaks down under stress. They are theory, not measurements, but many people recognise them.",
+    stress: [
+      ["The loop", "Ni → Fi", "The loop is the Hero (Ni) and the Child (Fi) feeding each other while you skip the Parent (Te), the function that acts and checks facts. Ni produces a bleak prediction, Fi feels it as personal hurt, and each makes the other stronger. You brood, withdraw and feel misunderstood, and the plan starts to feel pointless.", ["You replay a rejection or a slight and conclude that nobody will ever value what you do.", "You go silent and withdraw, wait for people to notice, and feel resentful or hurt when they do not.", "A bleak prediction like I will never get a job turns into a feeling that effort is pointless, and you stop trying."], "Bring Te back with something external and factual: write down the evidence for and against the bleak prediction, finish one small concrete task, or tell one person plainly what is going on and what you need."],
+      ["The grip", "Se", "Under severe or long stress the Inferior (Se) takes over in an unhealthy way. A strong Ni person becomes unusually sensory and impulsive, then feels guilty about it.", ["You binge-scroll, snack, game or watch shows far longer than you meant to.", "You make an impulsive purchase or have a sudden physical outburst, then regret it.", "You fixate on small physical details, like a noise, the room or your body, and cannot think."], "Give the body what it wants in a healthy form before it takes it in an unhealthy one: sleep, a walk, cooking, a workout."]
+    ],
     shadowIntro: "The shadow functions sit in the unconscious. They stay quiet when you are well and show up under stress, in conflict or when you feel cornered. They are mirror images of the first four, and you can work with them once you notice them.",
     shadow: [
       { pos: "Opposing Personality", fn: "Ne", name: "Extraverted Intuition", text: "Defends the Hero by resisting. It shows up as pessimistic what-if scenarios where everything collapses, and as rejecting other people's ideas before hearing them." },
@@ -653,6 +659,12 @@ const TYPE = {
       { pos: "الأب (Parent)", fn: "Te", name: "التفكير الخارجي", text: "المساعد الذي يحوّل رؤية البطل إلى خطط وأنظمة ونتائج. ينظّم ويضع الأهداف ويقيس ويقطع الهدر. ناضجة ويُعتمد عليها. تحت الضغط تصبح متسلطة أو باردة." },
       { pos: "الطفل (Child)", fn: "Fi", name: "الشعور الداخلي", text: "منظومة قيمك الداخلية، ولا تزال صغيرة وحساسة. تعرف ما يهمك لكنها تعجز عن وضع المشاعر في كلمات، وقد تجعلك سريع التأثر أو متقلب المزاج. تنضج ببطء مع الاهتمام. هنا يسكن اللعب والإبداع." },
       { pos: "الأدنى (Inferior)", fn: "Se", name: "الإحساس الخارجي", text: "أضعف وظائفك: الجسد واللحظة الحاضرة والحواس والفعل في العالم المادي. استخدامها مرهق وغير مألوف. تحت الضغط تسيطر عليك بشكل غير صحي، مثل التصفح المفرط والأكل للتعويض والإنفاق المتهور والهروب الحسي. تدريبها بالرياضة والمشي في الخارج والطبخ هو أقصر طريق لتحسّن حالتك." }
+    ],
+    stressH: "تحت الضغط: الحلقة والقبضة",
+    stressIntro: "نمطان يصفان كيف ينهار الـ INTJ عادة تحت الضغط. هما نظرية لا قياسات، لكن كثيرين يتعرفون عليهما.",
+    stress: [
+      ["الحلقة", "Ni → Fi", "الحلقة هي أن يغذي البطل (Ni) والطفل (Fi) بعضهما بينما تتجاوز الأب (Te)، الوظيفة التي تفعل وتتحقق من الوقائع. يصنع Ni توقعًا قاتمًا، ويشعر به Fi كجرح شخصي، ويقوّي كلٌّ منهما الآخر. تجتر وتنسحب وتشعر أنك غير مفهوم، وتبدأ الخطة تبدو بلا معنى.", ["تعيد رفضًا أو إساءة وتستنتج أن أحدًا لن يقدّر ما تفعله أبدًا.", "تصمت وتنسحب وتنتظر أن يلاحظ الناس، ثم تشعر بالاستياء أو الأذى حين لا يفعلون.", "توقع قاتم مثل لن أجد وظيفة أبدًا يتحول إلى شعور بأن الجهد بلا فائدة فتتوقف عن المحاولة."], "أعد Te بشيء خارجي وواقعي: اكتب الأدلة مع التوقع القاتم وضده، أو أنهِ مهمة صغيرة واحدة محددة، أو أخبر شخصًا واحدًا بوضوح بما يحدث وما تحتاجه."],
+      ["القبضة", "Se", "تحت ضغط شديد أو طويل تسيطر الوظيفة الأدنى (Se) بشكل غير صحي. يصبح شخص قوي في Ni حسيًا ومندفعًا على غير عادته، ثم يشعر بالذنب.", ["تتصفح بلا توقف أو تأكل أو تلعب أو تشاهد أكثر بكثير مما أردت.", "تشتري باندفاع أو تنفجر جسديًا فجأة ثم تندم.", "تتعلق بتفاصيل جسدية صغيرة كصوت أو الغرفة أو جسدك ولا تستطيع التفكير."], "أعطِ جسدك ما يريد بصورة صحية قبل أن يأخذه بصورة غير صحية: نوم أو مشي أو طبخ أو تمرين."]
     ],
     shadowIntro: "وظائف الظل تعيش في اللاوعي. تهدأ وأنت بخير، وتظهر تحت الضغط أو في الصراع أو حين تشعر بأنك محاصر. وهي صور معكوسة للوظائف الأربع الأولى، ويمكنك التعامل معها حين تلاحظها.",
     shadow: [
@@ -702,8 +714,14 @@ const ENN = {
     ],
     levelsH: "Healthy, average and under strain",
     levels: [["Healthy", "Curious, original, calm and generous with what you know. You act on your insight and stay connected to a few people."], ["Average", "You hoard time and knowledge, wait until you feel fully ready, and keep people at a distance. Ideas stay in your head."], ["Under long strain", "Numbness, withdrawal and a feeling that nothing matters. This is a stress pattern, not who you are, and it is exactly when a doctor or therapist helps most."]],
-    arrowsH: "Growth and stress directions",
-    arrows: [["Growth: toward 8", "The Challenger. Act on what you believe, take up space, be direct, and use your body and energy without counting every cost. Send the application. Ask for the interview."], ["Stress: toward 7", "The Enthusiast in its unhealthy form. You scatter: many half-started things, endless entertainment and fast comfort to escape the anxiety."]],
+    arrowsH: "Integration and disintegration",
+    arrowsIntro: "In the Enneagram each type has two arrows. In real security and growth you move toward the healthy qualities of one type (integration). Under long stress you slide toward the unhealthy qualities of another (disintegration). For a 5 these are Type 8 and Type 7. The arrows are a map of tendencies, and some Enneagram teachers dispute them, so use them to notice, not as a rule.",
+    arrowLook: "What it looks like for you",
+    arrows: [
+      ["Integration: you grow toward Type 8", "5 → 8", "The Challenger. This is what you gain when you feel safe and capable: you stop hoarding energy and start spending it. You become direct, decisive and protective of what matters, and you trust your gut as well as your analysis.", ["You send the application when you are 70% ready instead of polishing it for another week.", "You say no, or ask directly for the interview or the salary, instead of hinting.", "You use your body and energy: training hard, building things, taking up space in a room."]],
+      ["Disintegration: under stress you slide toward Type 7", "5 → 7", "The Enthusiast in its unhealthy form. When anxiety stays high for a long time, your usual withdrawal into thinking breaks down into scattered escape. You chase distraction and quick comfort to avoid the fear of being incapable.", ["You jump between tutorials, side projects and new ideas and finish none of them.", "You binge entertainment, snacks or scrolling late at night to avoid the worry.", "You make big plans in a burst of excitement, then drop them when it gets hard."]]
+    ],
+    arrowsUse: "Notice the early sign of the slide toward 7: many tabs open and nothing finished. Then take one Type 8 action: pick one thing, finish a small piece of it, and ask one direct question.",
     combineH: "INTJ and 5w6 together",
     combine: "Both lean toward thinking, planning and privacy, so the strengths stack: deep expertise, independence and long-range planning. The risks stack too: over-analysis, delay and too little contact with people. The bridge for both is the body and action: finish something small, move, and let one person see your work.",
     str: [["Deep expertise", "You go further into a subject than most people will."], ["Independence", "You can work alone without supervision."], ["Calm and reliability", "The 6 wing makes you dependable and steady in a crisis."], ["Sharp analysis", "You notice flaws and patterns that others miss."], ["Practical problem solving", "You like solutions that work, not just ideas."], ["Principled loyalty", "Once you trust someone, you stay."]],
@@ -736,8 +754,14 @@ const ENN = {
     ],
     levelsH: "الصحي والمتوسط وتحت الضغط",
     levels: [["صحي", "فضولي أصيل هادئ وسخي بما تعرف. تتصرف بناءً على بصيرتك وتبقى على صلة بأشخاص قليلين."], ["متوسط", "تكتنز الوقت والمعرفة وتنتظر حتى تشعر بجاهزية كاملة وتُبقي الناس بعيدين. تبقى الأفكار في رأسك."], ["تحت ضغط طويل", "خدر وانسحاب وشعور بأن لا شيء يهم. هذا نمط ضغط وليس حقيقتك، وهو بالضبط الوقت الذي يفيد فيه طبيب أو معالج أكثر من أي وقت."]],
-    arrowsH: "اتجاها النمو والضغط",
-    arrows: [["النمو: نحو 8", "المتحدّي. تصرّف بما تؤمن به وخذ مساحتك وكن مباشرًا واستخدم جسدك وطاقتك دون حساب كل تكلفة. أرسل طلب التوظيف. اطلب المقابلة."], ["الضغط: نحو 7", "المتحمس في صورته غير الصحية. تتشتت: أشياء كثيرة نصف مبدوءة وترفيه بلا نهاية وراحة سريعة للهروب من القلق."]],
+    arrowsH: "التكامل والتفكك",
+    arrowsIntro: "في الإنياغرام لكل نمط سهمان. في الأمان والنمو الحقيقيين تتحرك نحو صفات صحية لنمط آخر (التكامل). وتحت الضغط الطويل تنزلق نحو صفات غير صحية لنمط ثالث (التفكك). وعند النمط 5 هما النمط 8 والنمط 7. الأسهم خريطة ميول، وبعض معلمي الإنياغرام يختلفون حولها، فاستخدمها لتلاحظ لا كقاعدة.",
+    arrowLook: "كيف يظهر في حياتك",
+    arrows: [
+      ["التكامل: تنمو نحو النمط 8", "5 → 8", "المتحدّي. هذا ما تكسبه حين تشعر بالأمان والقدرة: تتوقف عن اكتناز الطاقة وتبدأ بإنفاقها. تصبح مباشرًا وحاسمًا وحاميًا لما يهم، وتثق بحدسك كما تثق بتحليلك.", ["ترسل الطلب وأنت جاهز بنسبة 70% بدل أن تصقله أسبوعًا آخر.", "تقول لا، أو تطلب المقابلة أو الراتب مباشرة بدل التلميح.", "تستخدم جسدك وطاقتك: تتمرن بقوة وتبني أشياء وتأخذ مساحتك في المكان."]],
+      ["التفكك: تحت الضغط تنزلق نحو النمط 7", "5 → 7", "المتحمس في صورته غير الصحية. حين يطول القلق ينهار انسحابك المعتاد إلى التفكير ويتحول إلى هروب متشتت. تطارد التسلية والراحة السريعة لتتجنب خوف أن تكون عاجزًا.", ["تقفز بين الدورات والمشاريع الجانبية والأفكار الجديدة ولا تنهي أيًّا منها.", "تفرط في الترفيه أو الأكل أو التصفح في وقت متأخر من الليل لتتجنب القلق.", "تضع خططًا كبيرة بحماس مفاجئ ثم تتركها حين تصعب."]]
+    ],
+    arrowsUse: "لاحظ العلامة المبكرة للانزلاق نحو 7: تبويبات كثيرة مفتوحة ولا شيء منتهٍ. ثم افعل خطوة واحدة من النمط 8: اختر شيئًا واحدًا وأنهِ جزءًا صغيرًا منه واسأل سؤالًا مباشرًا واحدًا.",
     combineH: "INTJ و5w6 معًا",
     combine: "كلاهما يميل إلى التفكير والتخطيط والخصوصية، فتتراكم نقاط القوة: خبرة عميقة واستقلال وتخطيط بعيد المدى. وتتراكم المخاطر أيضًا: فرط التحليل والتأجيل وقلة الاتصال بالناس. الجسر لكليهما هو الجسد والفعل: أنجز شيئًا صغيرًا وتحرك ودع شخصًا واحدًا يرى عملك.",
     str: [["خبرة عميقة", "تذهب في موضوع أبعد مما يذهب معظم الناس."], ["الاستقلال", "تعمل وحدك دون إشراف."], ["الهدوء والموثوقية", "جناح 6 يجعلك يُعتمد عليك وثابتًا في الأزمات."], ["تحليل حاد", "تلاحظ عيوبًا وأنماطًا يفوتها غيرك."], ["حل عملي للمشكلات", "تحب حلولًا تعمل لا أفكارًا فقط."], ["ولاء مبدئي", "حين تثق بشخص تبقى معه."]],
@@ -765,7 +789,7 @@ views.enneagram = () => {
     '<section class="panel stack"><h3>' + esc(L.wingH) + '</h3><p class="muted">' + esc(L.wing) + "</p></section>" +
     '<section class="stack"><h3>' + esc(L.looksH) + '</h3><div class="brain">' + L.looks.map(tx).join("") + "</div></section>" +
     '<section class="stack"><h3>' + esc(L.levelsH) + '</h3><div class="brain">' + L.levels.map(tx).join("") + "</div></section>" +
-    '<section class="stack"><h3>' + esc(L.arrowsH) + '</h3><div class="brain">' + L.arrows.map(tx).join("") + "</div></section>" +
+    '<section class="stack"><h3>' + esc(L.arrowsH) + '</h3><p class="muted">' + esc(L.arrowsIntro) + '</p><div class="brain">' + L.arrows.map(a => '<section class="panel stack"><div class="row between"><h3>' + esc(a[0]) + '</h3><span class="chip acc mono">' + esc(a[1]) + '</span></div><p class="muted">' + esc(a[2]) + '</p><div class="ai"><div class="label">' + esc(L.arrowLook) + "</div><ul>" + a[3].map(e => "<li>" + esc(e) + "</li>").join("") + '</ul></div></section>').join("") + '</div><div class="banner"><span>' + esc(L.arrowsUse) + "</span></div></section>" +
     '<section class="panel stack"><h3>' + esc(L.combineH) + '</h3><p class="muted">' + esc(L.combine) + "</p></section>" +
     '<section class="panel stack"><h3>' + esc(T.strH) + "</h3>" + L.str.map(s => '<div class="item"><div class="grow"><b>' + esc(s[0]) + '</b><div class="muted">' + esc(s[1]) + "</div></div></div>").join("") + "</section>" +
     '<section class="stack"><h3>' + esc(T.weakH) + '</h3><p class="muted small">' + esc(T.rateKey) + "</p>" + L.weak.map(w => { const r = m.rate[w.id] || 0; return '<section class="panel stack"><h3>' + esc(w.t) + '</h3><p class="muted">' + esc(w.text) + '</p><p><b>' + esc(T.inApp) + "</b> " + esc(w.fix) + '</p><div class="row"><span class="small muted">' + esc(T.rateQ) + '</span><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="rate" data-id="' + w.id + '" data-v="' + n + '" aria-pressed="' + (r === n) + '" aria-label="' + n + '">' + n + "</button>").join("") + "</div></div></section>"; }).join("") + "</section>" +
@@ -790,8 +814,8 @@ views.why = () => {
     '<section class="panel stack"><div class="row between"><h3>Your forks</h3>' + (rec.length ? '<span class="chip acc">' + nw + " of " + rec.length + " on the new path, 30 days</span>" : "") + "</div>" + (w.forks.length ? w.forks.slice(0, 12).map(f => '<div class="item"><span class="time">' + fmt(f.date) + '</span><div class="grow">' + esc(f.text) + '</div><span class="chip ' + (f.way === "new" ? "good" : "warn") + '">' + (f.way === "new" ? "new path" : "old pattern") + "</span></div>").join("") + '<p class="muted small">The old pattern is not failure. It is information: notice what was happening right before it.</p>' : '<p class="muted">No forks logged yet.</p>') + "</section>";
 };
 const LAB = {
-  en: { look: "What it looks like", wrong: "When it goes wrong", show: "How it shows up", work: "How to work with it" },
-  ar: { look: "كيف تظهر في حياتك", wrong: "حين تسوء", show: "كيف تظهر", work: "كيف تتعامل معها" }
+  en: { look: "What it looks like", wrong: "When it goes wrong", show: "How it shows up", work: "How to work with it", exit: "How to get out" },
+  ar: { look: "كيف تظهر في حياتك", wrong: "حين تسوء", show: "كيف تظهر", work: "كيف تتعامل معها", exit: "كيف تخرج" }
 };
 const EX = {
   en: {
@@ -828,6 +852,7 @@ views.type = () => {
     '<div class="banner"><span class="small">' + esc(L.note) + "</span></div>" +
     '<section class="stack"><h3>' + esc(L.stackH) + '</h3><p class="muted">' + esc(L.stackIntro) + '</p><div class="brain">' + L.stack.map(s => card(s, false)).join("") + "</div></section>" +
     '<section class="stack"><h3>' + esc(L.shadowH) + '</h3><p class="muted">' + esc(L.shadowIntro) + '</p><div class="brain">' + L.shadow.map(s => card(s, true)).join("") + "</div></section>" +
+    '<section class="stack"><h3>' + esc(L.stressH) + '</h3><p class="muted">' + esc(L.stressIntro) + '</p><div class="brain">' + L.stress.map(a => '<section class="panel stack"><div class="row between"><h3>' + esc(a[0]) + '</h3><span class="chip acc mono">' + esc(a[1]) + '</span></div><p class="muted">' + esc(a[2]) + '</p><div class="ai"><div class="label">' + esc((LAB[m.lang] || LAB.en).look) + "</div><ul>" + a[3].map(e => "<li>" + esc(e) + "</li>").join("") + '</ul><div class="label" style="margin-top:4px">' + esc((LAB[m.lang] || LAB.en).exit) + "</div><p>" + esc(a[4]) + "</p></div></section>").join("") + "</div></section>" +
     '<section class="panel stack"><h3>' + esc(L.strH) + '</h3><p class="muted small">' + esc(L.strNote) + "</p>" + L.str.map(s => '<div class="item"><div class="grow"><b>' + esc(s[0]) + '</b><div class="muted">' + esc(s[1]) + "</div></div></div>").join("") + "</section>" +
     '<section class="stack"><h3>' + esc(L.weakH) + '</h3><p class="muted small">' + esc(L.rateKey) + '</p>' + L.weak.map(w => { const r = m.rate[w.id] || 0; return '<section class="panel stack"><h3>' + esc(w.t) + '</h3><p class="muted">' + esc(w.text) + '</p><p><b>' + esc(L.inApp) + '</b> ' + esc(w.fix) + '</p><div class="row"><span class="small muted">' + esc(L.rateQ) + '</span><div class="scale">' + [1, 2, 3, 4, 5].map(n => '<button data-act="rate" data-id="' + w.id + '" data-v="' + n + '" aria-pressed="' + (r === n) + '" aria-label="' + n + '">' + n + "</button>").join("") + "</div></div></section>"; }).join("") + "</section>" +
     '<section class="panel stack"><h3>' + esc(L.focusH) + '</h3>' + (top.length ? top.map(w => '<div><b>' + esc(w.t) + '</b> <span class="chip acc mono">' + m.rate[w.id] + '/5</span><p class="muted">' + esc(w.fix) + "</p></div>").join("") : '<p class="muted">' + esc(L.focusEmpty) + "</p>") + "</section></div>";

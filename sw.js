@@ -1,6 +1,6 @@
 // Longview service worker: makes the app installable and open offline.
 // API calls (/api/*) are never cached, so your data always comes from the server.
-const CACHE = "longview-v2";
+const CACHE = "longview-v3";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -21,12 +21,19 @@ self.addEventListener("fetch", e => {
 
   if (url.origin === location.origin && url.pathname.startsWith("/api/")) return; // network only
 
-  // Page loads: network first so updates arrive, cached copy when offline.
+  // Page loads: network first (so updates arrive), but give up after 4 s and open the saved copy.
+  // That keeps the app opening instantly offline and on a bad connection.
   if (req.mode === "navigate") {
-    e.respondWith(
-      fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put("/index.html", copy)); return res; })
-        .catch(() => caches.match("/index.html"))
-    );
+    e.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const res = await Promise.race([fetch(req), new Promise((_, rej) => setTimeout(() => rej(new Error("slow")), 4000))]);
+        if (res && res.ok) cache.put("/index.html", res.clone());
+        return res;
+      } catch (err) {
+        return (await cache.match("/index.html")) || (await cache.match("/")) || Response.error();
+      }
+    })());
     return;
   }
 

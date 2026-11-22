@@ -177,15 +177,17 @@ details.why[open] summary::after { content: "–"; }
 }
 
 
-/* ---------- install banner ---------- */
-.installbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100% - 24px)); z-index: 70; display: flex; gap: 12px; align-items: flex-start; padding: 14px; background: var(--raised); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.30); }
-.installbar[hidden] { display: none; }
-.installbar img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
-.installbar .t { flex: 1; min-width: 0; }
-.installbar b { display: block; margin-bottom: 2px; }
-.installbar .acts { display: flex; gap: 8px; margin-top: 10px; }
-.installbar[data-mode="ios"] #installGo { display: none; }
-@media (max-width: 899px) { .installbar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+/* ---------- install button ---------- */
+.installbtn { align-self: flex-start; margin-top: 4px; }
+.installbtn[hidden] { display: none; }
+.sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.5); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet[hidden] { display: none; }
+.sheet .card { width: min(440px, calc(100% - 24px)); margin: 12px; padding: 18px; background: var(--raised); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.30); }
+.sheet h3 { margin: 0 0 8px; }
+.sheet ul { margin: 10px 0 0; padding-left: 18px; }
+.sheet .acts { display: flex; gap: 8px; margin-top: 14px; }
+@media (min-width: 900px) { .sheet { align-items: center; } }
+
 /* ---------- mobile fixes ---------- */
 body { overflow-x: clip; }
 .tablewrap { -webkit-overflow-scrolling: touch; }
@@ -241,12 +243,15 @@ body { overflow-x: clip; }
     <div class="brand"><b>Longview</b><span>Plan for the person you become</span></div>
     <nav class="nav" id="nav" aria-label="Sections"></nav>
     <div class="status" id="status" role="status"></div>
+    <button class="btn installbtn" id="installBtn" type="button">Install app</button>
   </aside>
   <main id="main"></main>
-  <div class="installbar" id="installBar" role="dialog" aria-label="Install Longview" hidden>
-    <img src="/icons/icon-192.png" alt="" width="44" height="44">
-    <div class="t"><b>Install Longview</b><span class="muted small msg"></span>
-      <div class="acts"><button class="btn" id="installGo" type="button">Install</button><button class="btn ghost" id="installLater" type="button">Not now</button></div>
+  <div class="sheet" id="installHelp" role="dialog" aria-modal="true" aria-labelledby="ihT" hidden>
+    <div class="card">
+      <h3 id="ihT">Install Longview</h3>
+      <p id="ihSteps"></p>
+      <ul class="muted small" id="ihChecks"></ul>
+      <div class="acts"><button class="btn" id="ihClose" type="button">Close</button></div>
     </div>
   </div>
 </div>
@@ -341,42 +346,54 @@ function lsGet() { try { const s = localStorage.getItem(LS); return s ? JSON.par
 function lsSet() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { } }
 function setStatus(t) { const el = $("#status"); if (el) el.textContent = t; }
 function save() { S.updated = Date.now(); lsSet(); clearTimeout(timer); timer = setTimeout(flush, 700); }
+const OFFLINE_MSG = "Offline: saved on this device, will sync when you are back online";
+let retryT = null;
 async function flush() {
   if (!docRef) { setStatus("Saved in this browser"); return; }
+  if (navigator.onLine === false) { setStatus(OFFLINE_MSG); return; }
   if (saving) { pending = true; return; }
   saving = true;
-  try { await docRef.set({ state: JSON.stringify(S), updated: S.updated }); setStatus("Saved online"); }
-  catch (e) { setStatus(e && e.code === "quota_exceeded" ? "Could not save online. Export your data from Me." : "Saved in this browser only"); }
+  try { await docRef.set({ state: JSON.stringify(S), updated: S.updated }); clearTimeout(retryT); setStatus("Saved online"); }
+  catch (e) {
+    setStatus(e && e.code === "quota_exceeded" ? "Could not save online. Export your data from Me." : (navigator.onLine === false ? OFFLINE_MSG : "Saved on this device. Will retry shortly"));
+    clearTimeout(retryT); retryT = setTimeout(flush, 30000);
+  }
   saving = false;
   if (pending) { pending = false; flush(); }
 }
+const stateApi = {
+  async get() {
+    const r = await fetch("/api/state", { headers: apiHeaders() });
+    if (r.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
+    if (!r.ok) throw { code: "server" };
+    return r.json();
+  },
+  async set(o) {
+    const r = await fetch("/api/state", { method: "PUT", headers: apiHeaders({ "content-type": "application/json" }), body: JSON.stringify(o) });
+    if (r.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
+    if (!r.ok) throw { code: "server" };
+  }
+};
+// Offline-first: the app always works from the copy on this device. This reconciles it with the server
+// whenever a connection exists: the copy with the newer "updated" time wins, and unsent edits are pushed.
 async function connectStore() {
   try {
     if (LOCAL) { setStatus("Local file: saved in this browser only"); return; }
     if (!appKey()) { setStatus("Saved in this browser"); return; }
-    const api = {
-      async get() {
-        const r = await fetch("/api/state", { headers: apiHeaders() });
-        if (r.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
-        if (!r.ok) throw { code: "server" };
-        return r.json();
-      },
-      async set(o) {
-        const r = await fetch("/api/state", { method: "PUT", headers: apiHeaders({ "content-type": "application/json" }), body: JSON.stringify(o) });
-        if (r.status === 401) { try { localStorage.removeItem(KEY_LS); } catch (e) { } throw { code: "unauthorized" }; }
-        if (!r.ok) throw { code: "server" };
-      }
-    };
-    const remote = await api.get();
-    docRef = api;
+    docRef = stateApi; // kept even when offline, so edits made offline are sent later
+    if (navigator.onLine === false) { setStatus(OFFLINE_MSG); return; }
+    const remote = await stateApi.get();
     if (remote.state) {
-      const r = JSON.parse(remote.state);
-      if ((r.updated || 0) >= (S.updated || 0)) { S = r; S.rdone = S.rdone || {}; lsSet(); render(); }
-      else flush();
-    } else flush();
+      const r = JSON.parse(remote.state), ru = r.updated || 0, lu = S.updated || 0;
+      if (ru > lu) { S = r; S.rdone = S.rdone || {}; lsSet(); render(); }
+      else if (ru < lu) await flush();
+    } else await flush();
     setStatus("Saved online");
-  } catch (e) { setStatus(e && e.code === "unauthorized" ? "Wrong access key. Reload to retry" : "Saved in this browser only"); }
+  } catch (e) { setStatus(e && e.code === "unauthorized" ? "Wrong access key. Reload to retry" : (navigator.onLine === false ? OFFLINE_MSG : "Saved on this device. Will retry shortly")); }
 }
+addEventListener("online", () => { setStatus("Back online. Syncing..."); connectStore(); });
+addEventListener("offline", () => setStatus(OFFLINE_MSG));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && navigator.onLine !== false && docRef) connectStore(); });
 
 /* ---------- scoring ---------- */
 const W = { routine: 25, habits: 25, sleep: 25, mind: 10, connect: 15 };
@@ -503,6 +520,7 @@ function toMessages(prompt) {
 async function callAI(prompt, opts, stream) {
   opts = opts || {};
   if (LOCAL) throw { code: "local" };
+  if (navigator.onLine === false) throw { code: "offline" };
   if (!appKey()) throw { code: "unauthorized" };
   let res;
   const tctl = new AbortController(); let timedOut = false;
@@ -536,7 +554,7 @@ async function askJson(prompt, opts) {
   try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { throw { code: "invalid_json" }; }
 }
 function errText(e) {
-  const m = { local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The AI provider rejected the server\'s key, or it is not set. Check the AI variables in Vercel.", network: "Could not reach the server. Check your connection and try again.", upstream: "The AI provider returned an error.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped.", timeout: "The AI took too long to answer. Try again, or switch AI_MODEL to a faster one in Vercel.", server: "The server returned an error." };
+  const m = { offline: "You are offline. The AI needs a connection; everything else keeps working and syncs later.", local: "AI and online saving only work on the deployed site, not on a local file. Open your Vercel address.", unauthorized: "Wrong or missing access key. Reload the page and enter it again.", server_config: "The AI provider rejected the server\'s key, or it is not set. Check the AI variables in Vercel.", network: "Could not reach the server. Check your connection and try again.", upstream: "The AI provider returned an error.", rate_limited: "Too many requests, or your usage limit is reached. Try again later.", invalid_json: "The reply was not in a usable format. Try again.", cancelled: "Stopped.", timeout: "The AI took too long to answer. Try again, or switch AI_MODEL to a faster one in Vercel.", server: "The server returned an error." };
   const base = m[e && e.code] || "Something interrupted the request. Try again.";
   return e && e.detail ? base + " (" + (e.status || "") + " " + e.detail + ")" : (e && e.status && e.code !== "unauthorized" ? base + " (" + e.status + ")" : base);
 }
@@ -1230,32 +1248,54 @@ document.addEventListener("change", e => {
 let installEvt = null;
 const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const installUI = (function () {
-  const bar = $("#installBar"), DISMISS = "longview.install.dismissed";
-  const recentlyDismissed = () => { try { return Date.now() - (+localStorage.getItem(DISMISS) || 0) < 14 * 864e5; } catch (e) { return false; } };
-  const later = () => { bar.hidden = true; try { localStorage.setItem(DISMISS, String(Date.now())); } catch (e) { } };
-  function show(mode) {
-    if (!bar || standalone || recentlyDismissed()) return;
-    bar.dataset.mode = mode;
-    bar.querySelector(".msg").textContent = mode === "ios" ? "Tap the Share button, then \u201cAdd to Home Screen\u201d." : "Open it like an app, straight from your home screen.";
-    bar.hidden = false;
+  const btn = $("#installBtn"), sheet = $("#installHelp"), FLAG = "longview.installed";
+  const getFlag = () => { try { return localStorage.getItem(FLAG) === "1"; } catch (e) { return false; } };
+  const setFlag = v => { try { if (v) localStorage.setItem(FLAG, "1"); else localStorage.removeItem(FLAG); } catch (e) { } };
+  const ua = navigator.userAgent;
+  const ios = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const android = /android/i.test(ua);
+  // The button is shown until the app is installed (or is running as an installed app).
+  const refresh = () => { if (btn) btn.hidden = standalone || getFlag(); };
+  const steps = () => ios
+    ? "In Safari, tap the Share button (the square with an arrow), then choose \u201cAdd to Home Screen\u201d."
+    : android
+      ? "Open the browser menu (\u22EE) and choose \u201cInstall app\u201d or \u201cAdd to Home screen\u201d."
+      : "Click the install icon at the right end of the address bar, or open the browser menu and choose \u201cInstall Longview\u201d.";
+  async function checks() {
+    if (navigator.onLine === false) return ["You are offline, so these checks cannot run."];
+    const ok = async u => { try { return (await fetch(u, { cache: "no-store" })).ok; } catch (e) { return false; } };
+    const [m, i1, i2] = await Promise.all([ok("/manifest.webmanifest"), ok("/icons/icon-192.png"), ok("/icons/icon-512.png")]);
+    const sw = !("serviceWorker" in navigator) ? "not supported" : navigator.serviceWorker.controller ? "active" : "not active yet, reload the page once";
+    return ["Secure connection (https): " + (window.isSecureContext ? "OK" : "NO"), "Manifest: " + (m ? "OK" : "MISSING"), "Icon 192: " + (i1 ? "OK" : "MISSING"), "Icon 512: " + (i2 ? "OK" : "MISSING"), "Service worker: " + sw];
   }
-  if (bar) {
-    $("#installLater").addEventListener("click", later);
-    $("#installGo").addEventListener("click", async () => {
-      if (!installEvt) return;
+  async function openHelp() {
+    $("#ihSteps").textContent = steps();
+    const ul = $("#ihChecks"); ul.textContent = ""; sheet.hidden = false;
+    (await checks()).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+  }
+  const closeHelp = () => { if (sheet) sheet.hidden = true; };
+  if (btn) btn.addEventListener("click", async () => {
+    if (installEvt) {
       installEvt.prompt();
       const c = await installEvt.userChoice.catch(() => null);
-      installEvt = null; bar.hidden = true;
-      if (!c || c.outcome !== "accepted") later();
-    });
-  }
-  return { show, hide: () => { if (bar) bar.hidden = true; } };
+      installEvt = null; // an install event can be used only once
+      if (c && c.outcome === "accepted") api.installed();
+      return;
+    }
+    openHelp();
+  });
+  if (sheet) { $("#ihClose").addEventListener("click", closeHelp); sheet.addEventListener("click", e => { if (e.target === sheet) closeHelp(); }); }
+  const api = {
+    refresh,
+    installed() { setFlag(true); closeHelp(); refresh(); },
+    available() { setFlag(false); refresh(); } // the browser offers the install, so it is not installed (any more)
+  };
+  return api;
 })();
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => { }));
-addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; setTimeout(() => installUI.show("prompt"), 2000); });
-addEventListener("appinstalled", () => { installEvt = null; installUI.hide(); });
-// iPhone/iPad Safari has no install event: show the two-step instruction instead.
-if ((/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && !standalone) setTimeout(() => installUI.show("ios"), 2500);
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; installUI.available(); });
+addEventListener("appinstalled", () => { installEvt = null; installUI.installed(); });
+installUI.refresh();
 
 /* ---------- boot ---------- */
 S = lsGet();

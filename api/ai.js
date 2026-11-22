@@ -27,7 +27,7 @@ function upstream(messages, stream) {
     return fetch(AI_BASE + "/chat/completions", {
       method: "POST",
       headers: { Authorization: "Bearer " + AI_KEY, "content-type": "application/json" },
-      body: JSON.stringify({ model: AI_MODEL, messages, max_tokens: 3000, stream })
+      body: JSON.stringify(Object.assign({ model: AI_MODEL, messages, max_tokens: 3000, stream }, process.env.AI_REASONING_EFFORT ? { reasoning_effort: process.env.AI_REASONING_EFFORT } : {}))
     });
   }
   if (process.env.ANTHROPIC_API_KEY) {
@@ -38,6 +38,24 @@ function upstream(messages, stream) {
     });
   }
   return null;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Free tiers often answer 429/503 ("overloaded") for a moment. Retry a couple of times before giving up.
+async function callUpstream(messages, stream) {
+  const delays = [0, 900, 2200];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i]) await sleep(delays[i]);
+    const last = i === delays.length - 1;
+    try {
+      const r = await upstream(messages, stream);
+      if (!r) return null;
+      if (r.ok || last || ![429, 500, 502, 503, 504].includes(r.status)) return r;
+      await r.text().catch(() => "");
+    } catch (e) {
+      if (last) throw e;
+    }
+  }
 }
 
 const fullText = j => AI_KEY
@@ -59,9 +77,8 @@ export default async function handler(req, res) {
 
   let up;
   try {
-    const p = upstream(messages, stream);
-    if (!p) return res.status(500).json({ code: "server_config" });
-    up = await p;
+    up = await callUpstream(messages, stream);
+    if (!up) return res.status(500).json({ code: "server_config" });
   } catch (e) {
     console.error("ai fetch failed", e);
     return res.status(502).json({ code: "upstream", detail: String((e && e.message) || e).slice(0, 200) });

@@ -1,10 +1,11 @@
 // Longview service worker: makes the app installable and open offline.
 // API calls (/api/*) are never cached, so your data always comes from the server.
-const CACHE = "longview-v1";
+const CACHE = "longview-v2";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // allSettled: one missing file must not stop the worker from installing (that would also block "Install app").
+  e.waitUntil(caches.open(CACHE).then(c => Promise.allSettled(SHELL.map(u => c.add(u)))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {

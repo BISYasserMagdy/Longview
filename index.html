@@ -176,6 +176,16 @@ details.why[open] summary::after { content: "–"; }
   h2 { font-size: 1.35rem; }
 }
 
+
+/* ---------- install banner ---------- */
+.installbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100% - 24px)); z-index: 70; display: flex; gap: 12px; align-items: flex-start; padding: 14px; background: var(--raised); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.30); }
+.installbar[hidden] { display: none; }
+.installbar img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
+.installbar .t { flex: 1; min-width: 0; }
+.installbar b { display: block; margin-bottom: 2px; }
+.installbar .acts { display: flex; gap: 8px; margin-top: 10px; }
+.installbar[data-mode="ios"] #installGo { display: none; }
+@media (max-width: 899px) { .installbar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 /* ---------- mobile fixes ---------- */
 body { overflow-x: clip; }
 .tablewrap { -webkit-overflow-scrolling: touch; }
@@ -231,10 +241,14 @@ body { overflow-x: clip; }
     <div class="brand"><b>Longview</b><span>Plan for the person you become</span></div>
     <nav class="nav" id="nav" aria-label="Sections"></nav>
     <div class="status" id="status" role="status"></div>
-    <button class="btn" id="installBtn" hidden>Install app</button>
-    <div class="muted small" id="iosHint" hidden>To install on iPhone: tap Share, then Add to Home Screen. <a href="#" id="iosHide">Hide</a></div>
   </aside>
   <main id="main"></main>
+  <div class="installbar" id="installBar" role="dialog" aria-label="Install Longview" hidden>
+    <img src="/icons/icon-192.png" alt="" width="44" height="44">
+    <div class="t"><b>Install Longview</b><span class="muted small msg"></span>
+      <div class="acts"><button class="btn" id="installGo" type="button">Install</button><button class="btn ghost" id="installLater" type="button">Not now</button></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1213,18 +1227,35 @@ document.addEventListener("change", e => {
 
 
 /* ---------- install as an app (PWA) ---------- */
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => { }));
 let installEvt = null;
 const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; const b = $("#installBtn"); if (b && !standalone) b.hidden = false; });
-addEventListener("appinstalled", () => { installEvt = null; const b = $("#installBtn"); if (b) b.hidden = true; });
-$("#installBtn").addEventListener("click", async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => { }); installEvt = null; $("#installBtn").hidden = true; });
-(function () {
-  let hid = false; try { hid = localStorage.getItem("longview.ioshint") === "1"; } catch (e) { }
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone;
-  const h = $("#iosHint"); if (h && ios && !hid) h.hidden = false;
-  const x = $("#iosHide"); if (x) x.addEventListener("click", ev => { ev.preventDefault(); h.hidden = true; try { localStorage.setItem("longview.ioshint", "1"); } catch (e) { } });
+const installUI = (function () {
+  const bar = $("#installBar"), DISMISS = "longview.install.dismissed";
+  const recentlyDismissed = () => { try { return Date.now() - (+localStorage.getItem(DISMISS) || 0) < 14 * 864e5; } catch (e) { return false; } };
+  const later = () => { bar.hidden = true; try { localStorage.setItem(DISMISS, String(Date.now())); } catch (e) { } };
+  function show(mode) {
+    if (!bar || standalone || recentlyDismissed()) return;
+    bar.dataset.mode = mode;
+    bar.querySelector(".msg").textContent = mode === "ios" ? "Tap the Share button, then \u201cAdd to Home Screen\u201d." : "Open it like an app, straight from your home screen.";
+    bar.hidden = false;
+  }
+  if (bar) {
+    $("#installLater").addEventListener("click", later);
+    $("#installGo").addEventListener("click", async () => {
+      if (!installEvt) return;
+      installEvt.prompt();
+      const c = await installEvt.userChoice.catch(() => null);
+      installEvt = null; bar.hidden = true;
+      if (!c || c.outcome !== "accepted") later();
+    });
+  }
+  return { show, hide: () => { if (bar) bar.hidden = true; } };
 })();
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => { }));
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; setTimeout(() => installUI.show("prompt"), 2000); });
+addEventListener("appinstalled", () => { installEvt = null; installUI.hide(); });
+// iPhone/iPad Safari has no install event: show the two-step instruction instead.
+if ((/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && !standalone) setTimeout(() => installUI.show("ios"), 2500);
 
 /* ---------- boot ---------- */
 S = lsGet();

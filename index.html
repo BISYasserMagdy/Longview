@@ -188,6 +188,18 @@ details.why[open] summary::after { content: "–"; }
 .sheet .acts { display: flex; gap: 8px; margin-top: 14px; }
 @media (min-width: 900px) { .sheet { align-items: center; } }
 
+/* ---------- languages ---------- */
+.ar { font-family: "IBM Plex Sans Arabic", var(--font-body), sans-serif; direction: rtl; unicode-bidi: isolate; }
+.flash { text-align: center; padding: 26px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.flash .es { font-family: var(--font-display); font-size: 2rem; font-weight: 700; overflow-wrap: anywhere; }
+.flash .ans { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.bar { height: 8px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+details.unit { border-top: 1px solid var(--line); padding: 4px 0 8px; }
+details.unit:first-of-type { border-top: 0; }
+details.unit summary { cursor: pointer; display: flex; gap: 10px; align-items: center; justify-content: space-between; min-height: 44px; }
+details.unit p { margin: 6px 0; }
+
 /* ---------- mobile fixes ---------- */
 body { overflow-x: clip; }
 .tablewrap { -webkit-overflow-scrolling: touch; }
@@ -338,7 +350,7 @@ let view = "today";
 let ai = {};           // transient AI results and busy flags
 let coachTurns = [];
 let GAP = 0;           // days away from the app, measured at load
-const VIEWS = [["today", "Today"], ["why", "Why"], ["week", "Week"], ["habits", "Habits"], ["journal", "Journal"], ["routine", "Routine"], ["career", "Career"], ["people", "People"], ["brain", "Brain"], ["type", "MBTI"], ["enneagram", "Enneagram"], ["coach", "Coach"], ["me", "Me"]];
+const VIEWS = [["today", "Today"], ["why", "Why"], ["week", "Week"], ["habits", "Habits"], ["journal", "Journal"], ["routine", "Routine"], ["career", "Career"], ["people", "People"], ["brain", "Brain"], ["type", "MBTI"], ["enneagram", "Enneagram"], ["lang", "Languages"], ["coach", "Coach"], ["me", "Me"]];
 
 /* ---------- storage: private db document when signed in, localStorage as a mirror ---------- */
 const LS = "longview.v1";
@@ -930,6 +942,7 @@ function ensureCareer() {
   if (!S.career) S.career = newCareer(!!S.demo);
   if (!S.mind) S.mind = { lang: "en", rate: {} };
   if (!S.rough) S.rough = { on: {}, log: {} };
+  if (!S.lang) S.lang = newLang(); else normLang();
   if (!S.why) S.why = { text: "", lang: "ar", forks: [] };
   if (!S.week) {
     S.week = { commits: {}, reviews: {}, dismissed: "" };
@@ -1297,6 +1310,241 @@ if ("serviceWorker" in navigator) addEventListener("load", () => navigator.servi
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; installUI.available(); });
 addEventListener("appinstalled", () => { installEvt = null; installUI.installed(); });
 installUI.refresh();
+
+/* ---------- languages: Spanish from zero ---------- */
+// Word format: [Spanish, English, Arabic, how to say it]. Pronunciation guides use the Latin American sound.
+const LANG_UNITS = [
+  { id: "u1", title: "1. Greetings and politeness", words: [
+    ["hola", "hello", "مرحبا", "OH-lah"],
+    ["buenos días", "good morning", "صباح الخير", "BWEH-nohs DEE-ahs"],
+    ["buenas tardes", "good afternoon", "مساء الخير", "BWEH-nahs TAR-dehs"],
+    ["buenas noches", "good evening / good night", "مساء الخير / تصبح على خير", "BWEH-nahs NOH-chehs"],
+    ["adiós", "goodbye", "مع السلامة", "ah-DYOHS"],
+    ["hasta luego", "see you later", "أراك لاحقًا", "AH-stah LWEH-goh"],
+    ["por favor", "please", "من فضلك", "por fah-VOR"],
+    ["gracias", "thank you", "شكرًا", "GRAH-syahs"],
+    ["de nada", "you are welcome", "عفوًا", "deh NAH-dah"],
+    ["perdón", "sorry / excuse me", "عذرًا", "pehr-DOHN"],
+    ["sí / no", "yes / no", "نعم / لا", "see / noh"],
+    ["¿cómo estás?", "how are you?", "كيف حالك؟", "KOH-moh eh-STAHS"],
+    ["bien, gracias", "fine, thanks", "بخير، شكرًا", "byen, GRAH-syahs"],
+    ["mucho gusto", "nice to meet you", "تشرفت بمعرفتك", "MOO-choh GOO-stoh"]
+  ] },
+  { id: "u2", title: "2. Talking about yourself", words: [
+    ["me llamo…", "my name is…", "اسمي…", "meh YAH-moh"],
+    ["¿cómo te llamas?", "what is your name?", "ما اسمك؟", "KOH-moh teh YAH-mahs"],
+    ["yo", "I", "أنا", "yoh"],
+    ["tú", "you (informal)", "أنت", "too"],
+    ["soy de…", "I am from…", "أنا من…", "soy deh"],
+    ["soy estudiante", "I am a student", "أنا طالب", "soy eh-stoo-DYAHN-teh"],
+    ["hablo árabe", "I speak Arabic", "أتكلم العربية", "AH-bloh AH-rah-beh"],
+    ["hablo un poco de español", "I speak a little Spanish", "أتكلم القليل من الإسبانية", "AH-bloh oon POH-koh deh eh-spah-NYOL"],
+    ["no entiendo", "I do not understand", "لا أفهم", "noh en-TYEN-doh"],
+    ["¿puedes repetir?", "can you repeat?", "هل يمكنك أن تعيد؟", "PWEH-dehs reh-peh-TEER"],
+    ["más despacio, por favor", "slower, please", "أبطأ من فضلك", "mahs dehs-PAH-syoh por fah-VOR"],
+    ["¿cómo se dice…?", "how do you say…?", "كيف تقول…؟", "KOH-moh seh DEE-seh"]
+  ] },
+  { id: "u3", title: "3. Numbers 0 to 10", words: [
+    ["cero", "0", "صفر", "SEH-roh"], ["uno", "1", "واحد", "OO-noh"], ["dos", "2", "اثنان", "dohs"],
+    ["tres", "3", "ثلاثة", "trehs"], ["cuatro", "4", "أربعة", "KWAH-troh"], ["cinco", "5", "خمسة", "SEEN-koh"],
+    ["seis", "6", "ستة", "says"], ["siete", "7", "سبعة", "SYEH-teh"], ["ocho", "8", "ثمانية", "OH-choh"],
+    ["nueve", "9", "تسعة", "NWEH-veh"], ["diez", "10", "عشرة", "dyehs"]
+  ] },
+  { id: "u4", title: "4. Food and ordering", words: [
+    ["agua", "water", "ماء", "AH-gwah"], ["café", "coffee", "قهوة", "kah-FEH"], ["té", "tea", "شاي", "teh"],
+    ["pan", "bread", "خبز", "pahn"], ["arroz", "rice", "أرز", "ah-ROHS"], ["pollo", "chicken", "دجاج", "POH-yoh"],
+    ["carne", "meat", "لحم", "KAR-neh"], ["fruta", "fruit", "فاكهة", "FROO-tah"],
+    ["quiero…", "I want…", "أريد…", "KYEH-roh"],
+    ["la cuenta, por favor", "the check, please", "الحساب من فضلك", "lah KWEN-tah por fah-VOR"],
+    ["¿cuánto cuesta?", "how much does it cost?", "كم السعر؟", "KWAN-toh KWEH-stah"],
+    ["tengo hambre", "I am hungry", "أنا جائع", "TEN-goh AHM-breh"],
+    ["tengo sed", "I am thirsty", "أنا عطشان", "TEN-goh sed"],
+    ["está delicioso", "it is delicious", "إنه لذيذ", "eh-STAH deh-lee-SYOH-soh"]
+  ] },
+  { id: "u5", title: "5. Question words and key verbs", words: [
+    ["¿qué?", "what?", "ماذا؟", "keh"], ["¿quién?", "who?", "من؟", "kyen"], ["¿dónde?", "where?", "أين؟", "DOHN-deh"],
+    ["¿cuándo?", "when?", "متى؟", "KWAN-doh"], ["¿por qué?", "why?", "لماذا؟", "por KEH"], ["¿cómo?", "how?", "كيف؟", "KOH-moh"],
+    ["ser", "to be (identity, permanent)", "يكون (الهوية والصفات الدائمة)", "sehr"],
+    ["estar", "to be (feelings, location)", "يكون (الحالة والمكان)", "eh-STAR"],
+    ["tener", "to have", "يملك", "teh-NEHR"], ["querer", "to want", "يريد", "keh-REHR"], ["ir", "to go", "يذهب", "eer"],
+    ["hablar", "to speak", "يتكلم", "ah-BLAR"], ["comer", "to eat", "يأكل", "koh-MEHR"], ["vivir", "to live", "يعيش", "vee-VEER"]
+  ] },
+  { id: "u6", title: "6. Days and colors", words: [
+    ["hoy", "today", "اليوم", "oy"], ["mañana", "tomorrow", "غدًا", "mah-NYAH-nah"], ["ayer", "yesterday", "أمس", "ah-YEHR"],
+    ["lunes", "Monday", "الإثنين", "LOO-nehs"], ["martes", "Tuesday", "الثلاثاء", "MAR-tehs"],
+    ["miércoles", "Wednesday", "الأربعاء", "MYEHR-koh-lehs"], ["jueves", "Thursday", "الخميس", "HWEH-vehs"],
+    ["viernes", "Friday", "الجمعة", "VYEHR-nehs"], ["sábado", "Saturday", "السبت", "SAH-bah-doh"], ["domingo", "Sunday", "الأحد", "doh-MEEN-goh"],
+    ["rojo", "red", "أحمر", "ROH-hoh"], ["azul", "blue", "أزرق", "ah-SOOL"], ["verde", "green", "أخضر", "VEHR-deh"],
+    ["negro", "black", "أسود", "NEH-groh"], ["blanco", "white", "أبيض", "BLAHN-koh"]
+  ] }
+];
+const LANG_LESSONS = [
+  { t: "How Spanish sounds", p: [
+    "Vowels never change: a = ah, e = eh, i = ee, o = oh, u = oo. Say them the same way every time.",
+    "h is silent (hola = OH-lah). j is a strong h (jueves = HWEH-vehs). ll and y sound like the y in yes in most countries (calle = KAH-yeh). ñ sounds like ny (español = eh-spah-NYOL).",
+    "rr is a rolled r (perro). v and b sound almost the same, close to an English b. In Spain, c before e or i and z sound like th. In Latin America they sound like s. The guides here use the Latin American sound.",
+    "Stress: words ending in a vowel, n or s are stressed on the second to last syllable (hablo, hablan). An accent mark (café, adiós) shows where the stress goes."
+  ] },
+  { t: "Nouns, el and la", p: [
+    "Every noun is masculine or feminine. el = the (masculine), la = the (feminine), un = a (masculine), una = a (feminine). Learn the article together with the word: el café, la fruta.",
+    "Plurals: add -s after a vowel (libros), -es after a consonant (ciudades), and use los or las for the.",
+    "Adjectives agree with the noun and usually come after it: el café caliente, la casa blanca."
+  ] },
+  { t: "Present tense of -ar verbs", p: [
+    "hablar (to speak): yo hablo, tú hablas, él / ella habla, nosotros hablamos, ellos / ellas hablan.",
+    "Drop the -ar and add -o, -as, -a, -amos, -an. The same pattern works for trabajar (to work), estudiar (to study) and necesitar (to need).",
+    "You can usually leave out the pronoun: hablo español means I speak Spanish."
+  ] },
+  { t: "Ser and estar (both mean to be)", p: [
+    "ser is for identity and lasting traits: soy estudiante, es alto. Forms: soy, eres, es, somos, son.",
+    "estar is for feelings and location: estoy bien, está en casa. Forms: estoy, estás, está, estamos, están."
+  ] },
+  { t: "Questions and saying no", p: [
+    "Questions start with ¿ and end with ?: ¿Hablas inglés?",
+    "To say no, put no before the verb: No hablo francés. Double negatives are normal: no quiero nada means I do not want anything."
+  ] },
+  { t: "Your first week", p: [
+    "Days 1 and 2: Unit 1. Listen to each word and say it out loud. Day 3: Unit 2 and a review. Day 4: Unit 3. Day 5: Unit 4. Day 6: Unit 5. Day 7: Unit 6, then ask the tutor to quiz you.",
+    "Every day: one 10 minute review, five minutes speaking out loud, and one question to the tutor."
+  ] }
+];
+const BOX_DAYS = [0, 1, 3, 7, 14, 30];
+const TUTOR_RULES = "You are a patient Spanish tutor for a complete beginner. The learner is an Arabic speaker who also reads English. Explain in simple English and add a short Arabic gloss for key words when it helps. Use Latin American Spanish unless asked otherwise. Keep replies under 140 words. When the learner writes Spanish, show the corrected sentence first, then one short sentence on why. End with one tiny exercise or question in Spanish they can answer. Plain text only, no markdown.";
+
+function newLang() { return { goalMin: 10, log: {}, cards: {}, custom: [], chat: [] }; }
+function normLang() {
+  const L = S.lang;
+  if (typeof L.goalMin !== "number") L.goalMin = 10;
+  L.log = L.log || {}; L.cards = L.cards || {}; L.custom = L.custom || []; L.chat = L.chat || [];
+  if (!ai.langClean) { ai.langClean = true; L.chat = L.chat.filter(t => t && t.content !== "Thinking..."); }
+}
+function allWords() {
+  const out = {};
+  LANG_UNITS.forEach(u => u.words.forEach((w, i) => { out[u.id + ":" + i] = { id: u.id + ":" + i, es: w[0], en: w[1], ar: w[2], p: w[3] }; }));
+  (S.lang.custom || []).forEach(c => { out["c:" + c.id] = { id: "c:" + c.id, es: c.es, en: c.en, ar: c.ar || "", p: "" }; });
+  return out;
+}
+function dueCards() { const t = today(), W = allWords(); return Object.keys(S.lang.cards).filter(id => W[id] && S.lang.cards[id].due <= t); }
+function langLog(k) { return S.lang.log[k || today()] || { min: 0, cards: 0 }; }
+function bumpLog(m, c) { const k = today(), l = S.lang.log[k] || (S.lang.log[k] = { min: 0, cards: 0 }); l.min += m; l.cards += c; }
+function langStreak() {
+  const had = d => { const l = S.lang.log[d]; return !!l && (l.min > 0 || l.cards > 0); };
+  let k = today(); if (!had(k)) k = addDays(k, -1);
+  let n = 0; while (had(k)) { n++; k = addDays(k, -1); }
+  return n;
+}
+function speak(text) {
+  try {
+    if (!("speechSynthesis" in window)) return false;
+    const u = new SpeechSynthesisUtterance(String(text).replace(/[¿¡…]/g, ""));
+    u.lang = "es-ES"; u.rate = 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); return true;
+  } catch (e) { return false; }
+}
+function wordRow(w) {
+  return '<div class="item"><div class="grow"><b>' + esc(w.es) + '</b> <span class="muted">' + esc(w.en) + '</span>' + (w.ar ? ' <span class="ar muted">' + esc(w.ar) + '</span>' : "") + (w.p ? '<div class="muted small mono">' + esc(w.p) + '</div>' : "") + '</div><button class="btn ghost" data-act="langSpeak" data-id="' + esc(w.id) + '" aria-label="Listen to ' + esc(w.es) + '">Listen</button></div>';
+}
+
+views.lang = () => {
+  const L = S.lang, W = allWords(), lg = langLog(), due = dueCards().length;
+  const ids = Object.keys(L.cards).filter(id => W[id]);
+  const mastered = ids.filter(id => L.cards[id].box >= 4).length, st = langStreak();
+  const pct = Math.min(100, Math.round(lg.min / Math.max(1, L.goalMin) * 100));
+  const r = ai.rev;
+  let review;
+  if (r && r.done) {
+    review = '<div class="flash"><div class="es">Session finished</div><p class="muted">' + r.reviewed + ' cards reviewed. The ones you found hard come back sooner.</p></div><div class="row"><button class="btn primary" data-act="langStop">Done</button></div>';
+  } else if (r) {
+    const w = W[r.queue[r.i]];
+    review = w
+      ? '<div class="flash"><div class="label">Card ' + (r.i + 1) + ' of ' + r.queue.length + '</div><div class="es">' + esc(w.es) + '</div><div><button class="btn" data-act="langSpeak" data-id="' + esc(w.id) + '">Listen</button></div>' +
+        (r.shown ? '<div class="ans"><b>' + esc(w.en) + '</b>' + (w.ar ? '<span class="ar">' + esc(w.ar) + '</span>' : "") + (w.p ? '<span class="muted small mono">' + esc(w.p) + '</span>' : "") + '</div>' : "") + '</div>' +
+        '<div class="row">' + (r.shown
+          ? '<button class="btn" data-act="langRate" data-g="again">Again</button><button class="btn primary" data-act="langRate" data-g="good">Good</button><button class="btn" data-act="langRate" data-g="easy">Easy</button>'
+          : '<button class="btn primary" data-act="langShow">Show answer</button>') + '<button class="btn ghost" data-act="langStop">Stop</button></div>'
+      : '<p class="muted">This card was removed.</p><div class="row"><button class="btn" data-act="langStop">Close</button></div>';
+  } else {
+    review = '<p class="muted">' + (ids.length ? (due ? due + ' cards are due now.' : 'Nothing due. Come back later, or start the next unit.') : 'Start a unit below to put its words here.') + '</p>' +
+      '<div class="row"><button class="btn primary" data-act="langReview"' + (due ? "" : " disabled") + '>Start review</button></div>';
+  }
+  const units = LANG_UNITS.map(u => {
+    const n = u.words.filter((w, i) => L.cards[u.id + ":" + i]).length, all = n === u.words.length;
+    return '<details class="unit" data-unit="' + u.id + '"' + (D.openU && D.openU[u.id] ? " open" : "") + '><summary><b>' + esc(u.title) + '</b><span class="chip ' + (all ? "good" : "") + '">' + n + ' / ' + u.words.length + ' started</span></summary>' +
+      '<div class="row" style="margin:6px 0">' + (all ? '<span class="muted small">All words are in your review.</span>' : '<button class="btn primary" data-act="langStart" data-u="' + u.id + '">Add these words to my review</button>') + '</div>' +
+      u.words.map((w, i) => wordRow({ id: u.id + ":" + i, es: w[0], en: w[1], ar: w[2], p: w[3] })).join("") + '</details>';
+  }).join("");
+  const lessons = LANG_LESSONS.map(l => '<details class="unit" data-unit="L' + esc(l.t) + '"' + (D.openU && D.openU["L" + l.t] ? " open" : "") + '><summary><b>' + esc(l.t) + '</b></summary>' + l.p.map(p => '<p>' + esc(p) + '</p>').join("") + '</details>').join("");
+  const chips = ["Teach me greetings with a mini dialogue", "Quiz me on what I have learned, 5 questions", "Explain ser and estar simply", "Give me a 10 minute plan for today"];
+  const chat = L.chat;
+  return '<div class="head"><div><h2>Languages</h2><p>Spanish, from zero. Short daily practice beats long rare sessions, so the goal here is a small amount, every day.</p></div></div>' +
+    '<section class="panel stack"><h3>Today</h3><div class="row between"><div><div class="label">Minutes today</div><b class="mono" style="font-size:1.6rem">' + lg.min + ' / ' + L.goalMin + '</b></div><div><div class="label">Streak</div><b class="mono" style="font-size:1.6rem">' + st + (st === 1 ? " day" : " days") + '</b></div><div><div class="label">Words</div><b class="mono" style="font-size:1.6rem">' + ids.length + '</b> <span class="muted small">' + mastered + ' well known</span></div></div>' +
+    '<div class="bar" aria-hidden="true"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="row"><span class="muted small">Log time spent (listening, speaking, anything):</span>' + [5, 10, 20].map(m => '<button class="btn" data-act="langAddMin" data-m="' + m + '">+' + m + ' min</button>').join("") + '</div>' +
+    '<div><div class="label" style="margin-bottom:6px">Daily goal, minutes</div><div class="scale">' + [5, 10, 15, 20, 30].map(m => '<button data-act="langGoal" data-v="' + m + '" aria-pressed="' + (L.goalMin === m) + '">' + m + '</button>').join("") + '</div></div></section>' +
+    '<section class="panel stack"><h3>Review</h3>' + review + (ai.voiceMsg ? '<p class="small muted">' + esc(ai.voiceMsg) + '</p>' : "") + '</section>' +
+    '<section class="panel"><h3>Your path</h3><p class="muted small" style="margin-bottom:6px">Open a unit, listen to the words, then add them to your review. Do one unit every day or two.</p>' + units + '</section>' +
+    '<section class="panel"><h3>Starter lessons</h3>' + lessons + '</section>' +
+    '<section class="panel stack"><h3>Spanish tutor</h3><p class="muted small">Ask anything, or write a Spanish sentence and it will correct it. It needs an internet connection.</p><div class="chat" id="lchat">' + (chat.length ? chat.map(t => '<div class="bubble ' + (t.role === "user" ? "me" : "ai") + '">' + esc(t.content) + "</div>").join("") : '<p class="muted">Pick a question below or write your own.</p>') + '</div><div class="row">' +
+    chips.map(c => '<button class="btn" data-act="tutorChip" data-q="' + esc(c) + '">' + esc(c) + "</button>").join("") + '</div>' +
+    '<form data-form="tutor" class="row" style="flex-wrap:nowrap"><input type="text" id="lin" placeholder="Ask, or write in Spanish" aria-label="Message" style="flex:1" autocomplete="off"><button class="btn primary" type="submit"' + (ai.tutorBusy ? " disabled" : "") + '>Send</button>' + (ai.tutorBusy ? '<button type="button" class="btn" data-act="stop">Stop</button>' : "") + '</form>' +
+    (chat.length && !ai.tutorBusy ? '<div class="row"><button class="btn ghost" data-act="tutorClear">Clear conversation</button></div>' : "") + '</section>' +
+    '<section class="panel stack"><h3>My own words</h3><p class="muted small">Add words you meet on your own. They join your review.</p><form data-form="addWord" class="form"><label class="field">Spanish<input type="text" id="wes" required></label><label class="field">English<input type="text" id="wen" required></label><label class="field">Arabic (optional)<input type="text" id="war" dir="rtl"></label><button class="btn primary" type="submit">Add word</button></form>' +
+    (L.custom.length ? L.custom.map(c => '<div class="item"><div class="grow"><b>' + esc(c.es) + '</b> <span class="muted">' + esc(c.en) + '</span>' + (c.ar ? ' <span class="ar muted">' + esc(c.ar) + '</span>' : "") + '</div><button class="btn ghost" data-act="langSpeak" data-id="c:' + esc(c.id) + '">Listen</button><button class="btn ghost danger" data-act="langDelCustom" data-id="' + esc(c.id) + '" aria-label="Remove ' + esc(c.es) + '">Remove</button></div>').join("") : "") + '</section>';
+};
+
+Object.assign(acts, {
+  langGoal(t) { S.lang.goalMin = +t.dataset.v; save(); render(); },
+  langAddMin(t) { bumpLog(+t.dataset.m, 0); save(); render(); },
+  langStart(t) {
+    const u = LANG_UNITS.find(x => x.id === t.dataset.u); if (!u) return;
+    u.words.forEach((w, i) => { const id = u.id + ":" + i; if (!S.lang.cards[id]) S.lang.cards[id] = { box: 0, due: today() }; });
+    D.openU = D.openU || {}; D.openU[u.id] = true; save(); render();
+  },
+  langReview() { const q = dueCards(); ai.rev = q.length ? { queue: q.slice(0, 20), i: 0, shown: false } : null; ai.voiceMsg = ""; render(); },
+  langShow() { if (ai.rev) { ai.rev.shown = true; render(); } },
+  langRate(t) {
+    const r = ai.rev; if (!r || r.done) return;
+    const id = r.queue[r.i], c = S.lang.cards[id];
+    if (c) {
+      if (t.dataset.g === "again") { c.box = 0; c.due = today(); r.queue.push(id); }
+      else { c.box = Math.min(BOX_DAYS.length - 1, c.box + (t.dataset.g === "easy" ? 2 : 1)); c.due = addDays(today(), BOX_DAYS[c.box]); }
+      bumpLog(0, 1);
+    }
+    r.i++; r.shown = false;
+    if (r.i >= r.queue.length) ai.rev = { done: true, reviewed: r.i };
+    save(); render();
+  },
+  langStop() { ai.rev = null; render(); },
+  langSpeak(t) { const w = allWords()[t.dataset.id]; if (w && !speak(w.es)) { ai.voiceMsg = "This device has no speech voice. Try another browser."; render(); } },
+  langDelCustom(t) { S.lang.custom = S.lang.custom.filter(c => c.id !== t.dataset.id); delete S.lang.cards["c:" + t.dataset.id]; save(); render(); },
+  tutorChip(t) { sendTutor(t.dataset.q); },
+  tutorClear() { S.lang.chat = []; save(); render(); }
+});
+Object.assign(forms, {
+  addWord(f) {
+    const es = $("#wes").value.trim(), en = $("#wen").value.trim(); if (!es || !en) return;
+    const id = uid(); S.lang.custom.push({ id, es, en, ar: $("#war").value.trim() }); S.lang.cards["c:" + id] = { box: 0, due: today() };
+    save(); render();
+  },
+  tutor(f) { const i = $("#lin"); const v = i.value; i.value = ""; sendTutor(v); }
+});
+document.addEventListener("toggle", e => { const d = e.target; if (d && d.dataset && d.dataset.unit) { D.openU = D.openU || {}; D.openU[d.dataset.unit] = d.open; } }, true);
+function tutorCtx() {
+  const L = S.lang, n = Object.keys(L.cards).length;
+  const started = LANG_UNITS.filter(u => u.words.some((w, i) => L.cards[u.id + ":" + i])).map(u => u.title);
+  return "\n\nLearner status: " + n + " words in review; units started: " + (started.join(", ") || "none yet") + ".";
+}
+async function sendTutor(q) {
+  q = (q || "").trim(); if (!q || ai.tutorBusy) return;
+  const chat = S.lang.chat;
+  chat.push({ role: "user", content: q }); chat.push({ role: "assistant", content: "Thinking..." });
+  ai.tutorBusy = true; ctl = new AbortController(); render();
+  const idx = chat.length - 1, input = [{ role: "user", content: TUTOR_RULES + tutorCtx() }].concat(chat.slice(0, idx).filter(t => t.content !== "Thinking...").slice(-12));
+  try { const r = await askText(input, { cache: false, signal: ctl.signal, onText: u => { chat[idx].content = u.text; const b = $("#lchat")?.lastElementChild; if (b) b.textContent = u.text; } }); chat[idx].content = r.text; }
+  catch (e) { chat[idx].content = (e.text ? e.text + "\n\n" : "") + (e.code === "cancelled" ? "Stopped." : errText(e)); }
+  ai.tutorBusy = false;
+  if (S.lang.chat.length > 40) S.lang.chat = S.lang.chat.slice(-40);
+  save(); render();
+}
 
 /* ---------- boot ---------- */
 S = lsGet();

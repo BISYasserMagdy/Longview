@@ -21,42 +21,50 @@ function cleanMessages(input) {
   return out;
 }
 
-function upstream(messages, stream) {
+function upstream(messages, stream, signal) {
   if (AI_KEY) {
     if (!AI_BASE || !AI_MODEL) return null;
     return fetch(AI_BASE + "/chat/completions", {
       method: "POST",
       headers: { Authorization: "Bearer " + AI_KEY, "content-type": "application/json" },
       body: JSON.stringify(Object.assign({ model: AI_MODEL, messages, max_tokens: 3000, stream }, process.env.AI_REASONING_EFFORT ? { reasoning_effort: process.env.AI_REASONING_EFFORT } : {}))
+,
+      signal
     });
   }
   if (process.env.ANTHROPIC_API_KEY) {
     return fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1600, messages, stream })
+      body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1600, messages, stream }),
+      signal
     });
   }
   return null;
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-// Free tiers often answer 429/503 ("overloaded") for a moment. Retry a couple of times before giving up.
-async function callUpstream(messages, stream) {
+// Vercel kills the function at maxDuration (60 s) with a bare 504. Stay under it and answer with a clear error instead.
+const BUDGET_MS = +process.env.AI_BUDGET_MS || 50000;
+// Free tiers often answer 429/503 ("overloaded") for a moment. Retry a couple of times, but only while time is left.
+async function callUpstream(messages, stream, t0) {
   const delays = [0, 900, 2200];
   for (let i = 0; i < delays.length; i++) {
     if (delays[i]) await sleep(delays[i]);
+    const left = BUDGET_MS - (Date.now() - t0);
+    if (left < 4000) throw Object.assign(new Error("budget"), { name: "TimeoutError" });
     const last = i === delays.length - 1;
     try {
-      const r = await upstream(messages, stream);
+      const r = await upstream(messages, stream, AbortSignal.timeout(left));
       if (!r) return null;
       if (r.ok || last || ![429, 500, 502, 503, 504].includes(r.status)) return r;
       await r.text().catch(() => "");
     } catch (e) {
-      if (last) throw e;
+      if (last || (e && e.name === "TimeoutError")) throw e;
     }
   }
 }
+const isTimeout = e => !!e && (e.name === "TimeoutError" || e.name === "AbortError");
 
 const fullText = j => AI_KEY
   ? (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || ""
@@ -75,11 +83,13 @@ export default async function handler(req, res) {
   if (!messages) return res.status(400).json({ code: "bad_request" });
   const stream = !!(req.body && req.body.stream);
 
+  const t0 = Date.now();
   let up;
   try {
-    up = await callUpstream(messages, stream);
+    up = await callUpstream(messages, stream, t0);
     if (!up) return res.status(500).json({ code: "server_config" });
   } catch (e) {
+    if (isTimeout(e)) return res.status(504).json({ code: "timeout" });
     console.error("ai fetch failed", e);
     return res.status(502).json({ code: "upstream", detail: String((e && e.message) || e).slice(0, 200) });
   }
@@ -96,7 +106,8 @@ export default async function handler(req, res) {
   }
 
   if (!stream) {
-    return res.status(200).json({ text: fullText(await up.json()) });
+    try { return res.status(200).json({ text: fullText(await up.json()) }); }
+    catch (e) { return res.status(isTimeout(e) ? 504 : 502).json(isTimeout(e) ? { code: "timeout" } : { code: "upstream", detail: "bad reply from provider" }); }
   }
 
   res.status(200);
